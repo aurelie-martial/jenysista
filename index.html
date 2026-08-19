@@ -426,53 +426,64 @@
 
         <!-- ================= PARTIE 3: AGENDA ================= -->
         <section id="agenda" class="tab-content space-y-6">
-            <div class="flex flex-col gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-xs">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div class="flex items-center gap-3">
-                        <h2 class="text-base sm:text-lg font-bold text-slate-800">Agenda</h2>
-                        <div class="flex bg-slate-100 p-1 rounded-xl">
-                            <button onclick="switchAgendaView('month')" id="btn-agenda-view-month" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 bg-white text-pink-600 shadow-sm">
-                                Mois
-                            </button>
-                            <button onclick="switchAgendaView('week')" id="btn-agenda-view-week" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900">
-                                Semaine
-                            </button>
-                            <button onclick="switchAgendaView('passwords')" id="btn-agenda-view-passwords" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900 whitespace-nowrap">
-                                🔒 Mots de passe
-                            </button>
+            <div class="flex bg-slate-100 p-1 rounded-xl w-fit gap-1">
+                <button onclick="switchAgendaSubTab('calendar')" id="btn-subtab-calendar" class="subtab-btn px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 bg-white text-pink-600 shadow-sm">
+                    📅 Agenda
+                </button>
+                <button onclick="switchAgendaSubTab('passwords')" id="btn-subtab-passwords" class="subtab-btn px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900">
+                    🔒 Mots de passe
+                </button>
+            </div>
+
+            <!-- SOUS-ONGLET: AGENDA -->
+            <div id="subtab-calendar" class="subtab-content active space-y-6">
+                <div class="flex flex-col gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-xs">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="flex bg-slate-100 p-1 rounded-xl">
+                                <button onclick="switchAgendaView('month')" id="btn-agenda-view-month" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 bg-white text-pink-600 shadow-sm">
+                                    Mois
+                                </button>
+                                <button onclick="switchAgendaView('week')" id="btn-agenda-view-week" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900">
+                                    Semaine
+                                </button>
+                            </div>
                         </div>
+
+                        <button onclick="openAgendaEventModal()" class="bg-pink-500 hover:bg-pink-600 text-white font-medium px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs whitespace-nowrap">
+                            ➕ <span class="hidden sm:inline">Ajouter un événement</span><span class="sm:hidden">Ajouter</span>
+                        </button>
                     </div>
 
-                    <button id="btn-add-agenda-event" onclick="openAgendaEventModal()" class="bg-pink-500 hover:bg-pink-600 text-white font-medium px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs whitespace-nowrap">
-                        ➕ <span class="hidden sm:inline">Ajouter un événement</span><span class="sm:hidden">Ajouter</span>
-                    </button>
+                    <div class="flex items-center gap-1.5 sm:gap-2">
+                        <button onclick="agendaNavigate(-1)" class="px-2 sm:px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg shadow-xs font-bold text-sm transition-colors">←</button>
+                        <span id="agenda-period-label" class="text-xs sm:text-sm font-bold text-pink-700 flex-1 text-center truncate"></span>
+                        <button onclick="agendaNavigate(1)" class="px-2 sm:px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg shadow-xs font-bold text-sm transition-colors">→</button>
+                        <button onclick="agendaGoToday()" class="ml-1 px-2 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap">Aujourd'hui</button>
+                    </div>
                 </div>
 
-                <div id="agenda-nav-bar" class="flex items-center gap-1.5 sm:gap-2">
-                    <button onclick="agendaNavigate(-1)" class="px-2 sm:px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg shadow-xs font-bold text-sm transition-colors">←</button>
-                    <span id="agenda-period-label" class="text-xs sm:text-sm font-bold text-pink-700 flex-1 text-center truncate"></span>
-                    <button onclick="agendaNavigate(1)" class="px-2 sm:px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg shadow-xs font-bold text-sm transition-colors">→</button>
-                    <button onclick="agendaGoToday()" class="ml-1 px-2 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap">Aujourd'hui</button>
+                <!-- Vue Mois -->
+                <div id="agenda-month-view" class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm">
+                    <div id="agenda-month-headers" class="grid grid-cols-7 gap-1.5 mb-2 text-center text-xs font-bold uppercase tracking-wider text-slate-500"></div>
+                    <div id="agenda-month-grid" class="grid grid-cols-7 gap-1.5"></div>
+                </div>
+
+                <!-- Vue Semaine -->
+                <div id="agenda-week-view" class="hidden bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm">
+                    <div id="agenda-week-grid" class="grid grid-cols-1 sm:grid-cols-7 gap-3"></div>
                 </div>
             </div>
 
-            <!-- Vue Mois -->
-            <div id="agenda-month-view" class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <div id="agenda-month-headers" class="grid grid-cols-7 gap-1.5 mb-2 text-center text-xs font-bold uppercase tracking-wider text-slate-500"></div>
-                <div id="agenda-month-grid" class="grid grid-cols-7 gap-1.5"></div>
-            </div>
-
-            <!-- Vue Semaine -->
-            <div id="agenda-week-view" class="hidden bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm">
-                <div id="agenda-week-grid" class="grid grid-cols-1 sm:grid-cols-7 gap-3"></div>
-            </div>
-
-            <!-- Vue Mots de passe (post-it) -->
-            <div id="agenda-passwords-view" class="hidden bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
-                <div class="flex items-start justify-between gap-3 flex-wrap">
-                    <p class="text-xs text-slate-400 max-w-md leading-relaxed">
-                        🔓 Ces post-it sont stockés en texte brut (non chiffrés), lisibles par les 2 comptes autorisés de l'app. Pratique comme pense-bête, mais évite d'y mettre tes mots de passe les plus sensibles (banque, email principal...) — préfère un vrai gestionnaire de mots de passe pour ceux-là.
-                    </p>
+            <!-- SOUS-ONGLET: MOTS DE PASSE (post-it) -->
+            <div id="subtab-passwords" class="subtab-content space-y-4">
+                <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-xs flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-slate-800 mb-1">Mots de passe</h2>
+                        <p class="text-xs text-slate-400 max-w-md leading-relaxed">
+                            🔓 Ces post-it sont stockés en texte brut (non chiffrés), lisibles par les 2 comptes autorisés de l'app. Pratique comme pense-bête, mais évite d'y mettre tes mots de passe les plus sensibles (banque, email principal...) — préfère un vrai gestionnaire de mots de passe pour ceux-là.
+                        </p>
+                    </div>
                     <button onclick="addPasswordNote()" class="bg-pink-500 hover:bg-pink-600 text-white font-medium px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs whitespace-nowrap shrink-0">
                         ➕ Nouveau post-it
                     </button>
@@ -480,6 +491,7 @@
                 <div id="password-notes-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"></div>
             </div>
         </section>
+
 
         <!-- ================= PARTIE SPORT ================= -->
         <section id="sport" class="tab-content space-y-6">
@@ -1097,6 +1109,7 @@
                         renderMealPlanner();
                         renderPlanGoals();
                         renderAgenda();
+                        renderPasswordNotes();
                         renderSport();
                     } else {
                         saveData(); // Première sauvegarde si les données n'existent pas encore pour cet utilisateur
@@ -1358,25 +1371,37 @@
             });
         }
 
+        function switchAgendaSubTab(subtabId) {
+            document.querySelectorAll('#agenda .subtab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('#agenda .subtab-btn').forEach(el => {
+                el.classList.remove('bg-white', 'text-pink-600', 'shadow-sm');
+                el.classList.add('text-slate-600');
+            });
+
+            document.getElementById(`subtab-${subtabId}`).classList.add('active');
+            const targetBtn = document.getElementById(`btn-subtab-${subtabId}`);
+            targetBtn.classList.add('bg-white', 'text-pink-600', 'shadow-sm');
+            targetBtn.classList.remove('text-slate-600');
+
+            if (subtabId === 'passwords') {
+                renderPasswordNotes();
+            } else {
+                renderAgenda();
+            }
+        }
+
         function switchAgendaView(mode) {
             window.agendaViewMode = mode;
             const btnMonth = document.getElementById('btn-agenda-view-month');
             const btnWeek = document.getElementById('btn-agenda-view-week');
-            const btnPasswords = document.getElementById('btn-agenda-view-passwords');
-            const allBtns = [btnMonth, btnWeek, btnPasswords];
-            allBtns.forEach(b => b.classList.remove('bg-white', 'text-pink-600', 'shadow-sm'));
-            allBtns.forEach(b => b.classList.add('text-slate-600'));
-            const activeBtn = mode === 'month' ? btnMonth : (mode === 'week' ? btnWeek : btnPasswords);
+            [btnMonth, btnWeek].forEach(b => b.classList.remove('bg-white', 'text-pink-600', 'shadow-sm'));
+            [btnMonth, btnWeek].forEach(b => b.classList.add('text-slate-600'));
+            const activeBtn = mode === 'month' ? btnMonth : btnWeek;
             activeBtn.classList.add('bg-white', 'text-pink-600', 'shadow-sm');
             activeBtn.classList.remove('text-slate-600');
 
             document.getElementById('agenda-month-view').classList.toggle('hidden', mode !== 'month');
             document.getElementById('agenda-week-view').classList.toggle('hidden', mode !== 'week');
-            document.getElementById('agenda-passwords-view').classList.toggle('hidden', mode !== 'passwords');
-            // La barre de navigation par date et le bouton "Ajouter un événement" n'ont pas de sens en mode post-it
-            document.getElementById('agenda-nav-bar').classList.toggle('hidden', mode === 'passwords');
-            document.getElementById('btn-add-agenda-event').classList.toggle('hidden', mode === 'passwords');
-
             renderAgenda();
         }
 
@@ -1400,10 +1425,8 @@
         function renderAgenda() {
             if (window.agendaViewMode === 'month') {
                 renderAgendaMonthView();
-            } else if (window.agendaViewMode === 'week') {
-                renderAgendaWeekView();
             } else {
-                renderPasswordNotes();
+                renderAgendaWeekView();
             }
         }
 
