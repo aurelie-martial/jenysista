@@ -437,15 +437,18 @@
                             <button onclick="switchAgendaView('week')" id="btn-agenda-view-week" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900">
                                 Semaine
                             </button>
+                            <button onclick="switchAgendaView('passwords')" id="btn-agenda-view-passwords" class="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900 whitespace-nowrap">
+                                🔒 Mots de passe
+                            </button>
                         </div>
                     </div>
 
-                    <button onclick="openAgendaEventModal()" class="bg-pink-500 hover:bg-pink-600 text-white font-medium px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs whitespace-nowrap">
+                    <button id="btn-add-agenda-event" onclick="openAgendaEventModal()" class="bg-pink-500 hover:bg-pink-600 text-white font-medium px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs whitespace-nowrap">
                         ➕ <span class="hidden sm:inline">Ajouter un événement</span><span class="sm:hidden">Ajouter</span>
                     </button>
                 </div>
 
-                <div class="flex items-center gap-1.5 sm:gap-2">
+                <div id="agenda-nav-bar" class="flex items-center gap-1.5 sm:gap-2">
                     <button onclick="agendaNavigate(-1)" class="px-2 sm:px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg shadow-xs font-bold text-sm transition-colors">←</button>
                     <span id="agenda-period-label" class="text-xs sm:text-sm font-bold text-pink-700 flex-1 text-center truncate"></span>
                     <button onclick="agendaNavigate(1)" class="px-2 sm:px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg shadow-xs font-bold text-sm transition-colors">→</button>
@@ -462,6 +465,19 @@
             <!-- Vue Semaine -->
             <div id="agenda-week-view" class="hidden bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm">
                 <div id="agenda-week-grid" class="grid grid-cols-1 sm:grid-cols-7 gap-3"></div>
+            </div>
+
+            <!-- Vue Mots de passe (post-it) -->
+            <div id="agenda-passwords-view" class="hidden bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                <div class="flex items-start justify-between gap-3 flex-wrap">
+                    <p class="text-xs text-slate-400 max-w-md leading-relaxed">
+                        🔓 Ces post-it sont stockés en texte brut (non chiffrés), lisibles par les 2 comptes autorisés de l'app. Pratique comme pense-bête, mais évite d'y mettre tes mots de passe les plus sensibles (banque, email principal...) — préfère un vrai gestionnaire de mots de passe pour ceux-là.
+                    </p>
+                    <button onclick="addPasswordNote()" class="bg-pink-500 hover:bg-pink-600 text-white font-medium px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm transition-colors flex items-center justify-center gap-1.5 shadow-xs whitespace-nowrap shrink-0">
+                        ➕ Nouveau post-it
+                    </button>
+                </div>
+                <div id="password-notes-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"></div>
             </div>
         </section>
 
@@ -892,6 +908,22 @@
                 </div>
             </div>
 
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="agenda-event-allday" checked onchange="toggleAgendaEventAllDay()" class="w-4 h-4 rounded border-slate-300 text-pink-500 focus:ring-pink-400 cursor-pointer">
+                <label for="agenda-event-allday" class="text-xs font-semibold text-slate-500 cursor-pointer">Toute la journée</label>
+            </div>
+
+            <div id="agenda-event-time-wrapper" class="hidden grid grid-cols-2 gap-2">
+                <div class="min-w-0">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Heure début</label>
+                    <input type="time" id="agenda-event-start-time" class="compact-date w-full min-w-0 box-border px-1.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-pink-400">
+                </div>
+                <div class="min-w-0">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Heure fin</label>
+                    <input type="time" id="agenda-event-end-time" class="compact-date w-full min-w-0 box-border px-1.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-pink-400">
+                </div>
+            </div>
+
             <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Récurrence</label>
                 <select id="agenda-event-recurrence" onchange="updateAgendaRecurrenceFields()" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-pink-400 bg-white">
@@ -1054,6 +1086,7 @@
                         window.recipeCategories = data.recipeCategories || window.recipeCategories;
                         window.recipes = data.recipes || window.recipes;
                         window.agendaEvents = data.agendaEvents || window.agendaEvents;
+                        window.agendaPasswordNotes = data.agendaPasswordNotes || window.agendaPasswordNotes;
                         window.sportMeasurements = data.sportMeasurements || window.sportMeasurements;
                         window.sportActivities = data.sportActivities || window.sportActivities;
                         window.mealPlans = data.mealPlans || window.mealPlans;
@@ -1097,6 +1130,7 @@
                 recipeCategories: window.recipeCategories,
                 recipes: window.recipes,
                 agendaEvents: window.agendaEvents,
+                agendaPasswordNotes: window.agendaPasswordNotes,
                 sportMeasurements: window.sportMeasurements,
                 sportActivities: window.sportActivities,
                 mealPlans: window.mealPlans
@@ -1145,6 +1179,9 @@
         // type: 'garde' | 'pas_garde' | 'vacances' | 'weekend' | 'anniversaire'
         // start/end au format 'YYYY-MM-DD'. recurring = true pour les événements qui se répètent chaque année (anniversaires).
         window.agendaEvents = [];
+
+        // --- POST-IT MOTS DE PASSE (texte libre, non chiffré) ---
+        window.agendaPasswordNotes = [];
 
         // --- DONNÉES RECETTES ---
         window.recipeCategories = [
@@ -1312,21 +1349,34 @@
         }
 
         function getAgendaEventsForDate(dateObj) {
-            return window.agendaEvents.filter(ev => eventOccursOnDate(ev, dateObj));
+            const events = window.agendaEvents.filter(ev => eventOccursOnDate(ev, dateObj));
+            return events.sort((a, b) => {
+                if (!a.startTime && !b.startTime) return 0;
+                if (!a.startTime) return -1;
+                if (!b.startTime) return 1;
+                return a.startTime.localeCompare(b.startTime);
+            });
         }
 
         function switchAgendaView(mode) {
             window.agendaViewMode = mode;
             const btnMonth = document.getElementById('btn-agenda-view-month');
             const btnWeek = document.getElementById('btn-agenda-view-week');
-            [btnMonth, btnWeek].forEach(b => b.classList.remove('bg-white', 'text-pink-600', 'shadow-sm'));
-            [btnMonth, btnWeek].forEach(b => b.classList.add('text-slate-600'));
-            const activeBtn = mode === 'month' ? btnMonth : btnWeek;
+            const btnPasswords = document.getElementById('btn-agenda-view-passwords');
+            const allBtns = [btnMonth, btnWeek, btnPasswords];
+            allBtns.forEach(b => b.classList.remove('bg-white', 'text-pink-600', 'shadow-sm'));
+            allBtns.forEach(b => b.classList.add('text-slate-600'));
+            const activeBtn = mode === 'month' ? btnMonth : (mode === 'week' ? btnWeek : btnPasswords);
             activeBtn.classList.add('bg-white', 'text-pink-600', 'shadow-sm');
             activeBtn.classList.remove('text-slate-600');
 
             document.getElementById('agenda-month-view').classList.toggle('hidden', mode !== 'month');
             document.getElementById('agenda-week-view').classList.toggle('hidden', mode !== 'week');
+            document.getElementById('agenda-passwords-view').classList.toggle('hidden', mode !== 'passwords');
+            // La barre de navigation par date et le bouton "Ajouter un événement" n'ont pas de sens en mode post-it
+            document.getElementById('agenda-nav-bar').classList.toggle('hidden', mode === 'passwords');
+            document.getElementById('btn-add-agenda-event').classList.toggle('hidden', mode === 'passwords');
+
             renderAgenda();
         }
 
@@ -1350,9 +1400,65 @@
         function renderAgenda() {
             if (window.agendaViewMode === 'month') {
                 renderAgendaMonthView();
-            } else {
+            } else if (window.agendaViewMode === 'week') {
                 renderAgendaWeekView();
+            } else {
+                renderPasswordNotes();
             }
+        }
+
+        // --- Post-it "Mots de passe" (texte libre, non chiffré) ---
+        const PASSWORD_NOTE_COLORS = ['bg-pastel-orange', 'bg-pastel-blue', 'bg-pastel-green', 'bg-pastel-pink', 'bg-pastel-purple'];
+
+        function addPasswordNote() {
+            window.agendaPasswordNotes.push({
+                id: Date.now(),
+                color: PASSWORD_NOTE_COLORS[window.agendaPasswordNotes.length % PASSWORD_NOTE_COLORS.length],
+                text: ''
+            });
+            saveData();
+            renderPasswordNotes();
+        }
+
+        function updatePasswordNoteText(id, value) {
+            const note = window.agendaPasswordNotes.find(n => n.id === id);
+            if (!note) return;
+            note.text = value;
+            saveData();
+        }
+
+        function deletePasswordNote(id) {
+            if (!confirm("Supprimer ce post-it ?")) return;
+            window.agendaPasswordNotes = window.agendaPasswordNotes.filter(n => n.id !== id);
+            saveData();
+            renderPasswordNotes();
+        }
+
+        function escapeForTextarea(str) {
+            return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function renderPasswordNotes() {
+            const grid = document.getElementById('password-notes-grid');
+            if (!grid) return;
+
+            if (window.agendaPasswordNotes.length === 0) {
+                grid.innerHTML = `<p class="col-span-full text-sm text-center text-slate-400 py-6">Aucun post-it pour l'instant. Clique sur "Nouveau post-it" pour en ajouter un.</p>`;
+                return;
+            }
+
+            // Légère rotation alternée pour un vrai effet post-it
+            grid.innerHTML = window.agendaPasswordNotes.map((note, i) => {
+                const rotation = i % 4 === 0 ? '-rotate-1' : (i % 4 === 1 ? 'rotate-1' : (i % 4 === 2 ? '-rotate-2' : 'rotate-2'));
+                return `
+                    <div class="${note.color || 'bg-pastel-orange'} ${rotation} hover:rotate-0 rounded-lg shadow-md p-3 flex flex-col gap-2 transition-transform duration-150">
+                        <div class="flex justify-end">
+                            <button onclick="deletePasswordNote(${note.id})" class="text-slate-500 hover:text-rose-600 text-xs leading-none" title="Supprimer">✕</button>
+                        </div>
+                        <textarea onchange="updatePasswordNoteText(${note.id}, this.value)" placeholder="Site, identifiant, mot de passe..." class="bg-transparent border-none focus:outline-none focus:ring-0 resize-none text-sm text-slate-700 min-h-[120px] w-full placeholder:text-slate-400">${escapeForTextarea(note.text)}</textarea>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Construit le style inline (fond clair + texte/bordure teintés) à partir de la couleur choisie
@@ -1362,7 +1468,8 @@
         }
 
         function renderAgendaEventPill(ev, compact) {
-            const label = ev.title ? `${ev.emoji || '📌'} ${ev.title}` : `${ev.emoji || '📌'}`;
+            const timePrefix = ev.startTime ? `${ev.startTime} ` : '';
+            const label = ev.title ? `${timePrefix}${ev.emoji || '📌'} ${ev.title}` : `${timePrefix}${ev.emoji || '📌'}`;
             const sizeClasses = compact ? 'text-[9px] px-1 py-0.5 truncate' : 'text-xs px-2 py-1';
             return `<div class="${sizeClasses} rounded-md font-semibold cursor-pointer mt-0.5" style="${agendaPillStyle(ev.color)}" title="${ev.title || ''}">${label}</div>`;
         }
@@ -1492,7 +1599,10 @@
                 listEl.innerHTML = `<p class="text-sm text-center text-slate-400 py-4">Aucun événement ce jour-là.</p>`;
             } else {
                 listEl.innerHTML = events.map(ev => {
-                    const label = ev.title ? `${ev.emoji || '📌'} ${ev.title}` : `${ev.emoji || '📌'}`;
+                    const timePrefix = ev.startTime
+                        ? `${ev.startTime}${ev.endTime && ev.endTime !== ev.startTime ? ' - ' + ev.endTime : ''} · `
+                        : '';
+                    const label = ev.title ? `${timePrefix}${ev.emoji || '📌'} ${ev.title}` : `${timePrefix}${ev.emoji || '📌'}`;
                     return `
                         <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
                             <div class="flex items-center gap-2 min-w-0">
@@ -1540,6 +1650,11 @@
             }
         }
 
+        function toggleAgendaEventAllDay() {
+            const isAllDay = document.getElementById('agenda-event-allday').checked;
+            document.getElementById('agenda-event-time-wrapper').classList.toggle('hidden', isAllDay);
+        }
+
         function updateAgendaRecurrenceFields() {
             const recurrence = document.getElementById('agenda-event-recurrence').value;
             const untilWrapper = document.getElementById('agenda-event-until-wrapper');
@@ -1556,6 +1671,9 @@
             document.getElementById('agenda-event-color').value = '#6366f1';
             document.getElementById('agenda-event-recurrence').value = 'none';
             document.getElementById('agenda-event-until').value = '';
+            document.getElementById('agenda-event-allday').checked = true;
+            document.getElementById('agenda-event-start-time').value = '';
+            document.getElementById('agenda-event-end-time').value = '';
             document.getElementById('btn-delete-agenda-event').classList.add('hidden');
 
             const today = formatDateISO(new Date());
@@ -1575,6 +1693,9 @@
                     document.getElementById('agenda-event-end').value = ev.end || ev.start;
                     document.getElementById('agenda-event-recurrence').value = ev.recurring ? 'yearly' : (ev.recurrence || 'none');
                     document.getElementById('agenda-event-until').value = ev.until || '';
+                    document.getElementById('agenda-event-allday').checked = !ev.startTime;
+                    document.getElementById('agenda-event-start-time').value = ev.startTime || '';
+                    document.getElementById('agenda-event-end-time').value = ev.endTime || '';
                     document.getElementById('btn-delete-agenda-event').classList.remove('hidden');
                 }
             } else {
@@ -1582,6 +1703,7 @@
             }
 
             updateAgendaRecurrenceFields();
+            toggleAgendaEventAllDay();
             document.getElementById('agenda-event-modal').classList.remove('hidden');
         }
 
@@ -1601,6 +1723,17 @@
                 ? (document.getElementById('agenda-event-until').value || '')
                 : '';
 
+            const isAllDay = document.getElementById('agenda-event-allday').checked;
+            let startTime = '', endTime = '';
+            if (!isAllDay) {
+                startTime = document.getElementById('agenda-event-start-time').value;
+                if (!startTime) {
+                    alert("Merci de renseigner une heure de début, ou coche \"Toute la journée\".");
+                    return;
+                }
+                endTime = document.getElementById('agenda-event-end-time').value || startTime;
+            }
+
             if (!start) {
                 alert("Merci de renseigner une date de début.");
                 return;
@@ -1618,6 +1751,9 @@
                     ev.end = end;
                     ev.recurrence = recurrence;
                     ev.until = until;
+                    ev.startTime = startTime;
+                    ev.endTime = endTime;
+                    ev.localUpdatedAt = Date.now();
                     delete ev.recurring;
                 }
             } else {
@@ -1629,7 +1765,10 @@
                     start,
                     end,
                     recurrence,
-                    until
+                    until,
+                    startTime,
+                    endTime,
+                    localUpdatedAt: Date.now()
                 });
             }
 
