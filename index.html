@@ -2299,14 +2299,14 @@
         const RECIPE_IMAGE_ASPECT_RATIO = 16 / 9;
         let recipeImageCropper = null;
 
-        // Compresse un canvas déjà recadré jusqu'à obtenir un poids maximum de maxSizeBytes (20 Ko par
+        // Compresse un canvas déjà recadré jusqu'à obtenir un poids maximum de maxSizeBytes (5 Ko par
         // défaut), en réduisant d'abord la qualité JPEG puis, si ça ne suffit pas, les dimensions.
         function compressCanvasToLimit(sourceCanvas, options = {}) {
             const {
                 initialQuality = 0.75,
-                maxSizeBytes = 20 * 1024, // 20 Ko cible
+                maxSizeBytes = 5 * 1024, // 5 Ko cible
                 minQuality = 0.12,
-                minWidth = 200
+                minWidth = 120
             } = options;
 
             return new Promise((resolve) => {
