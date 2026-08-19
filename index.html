@@ -12,6 +12,10 @@
     <!-- Masquer la barre de navigateur Safari pour un effet "Application native" -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<!-- Équivalent Android/Chrome : sans ce manifest, "Ajouter à l'écran d'accueil"
+         ignore l'icône personnalisée et prend une icône générique. -->
+    <link rel="manifest" href="manifest.json">
     <title>JenyTracker 2026</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
