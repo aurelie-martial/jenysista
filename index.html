@@ -961,6 +961,9 @@
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
+        // Seuls ces comptes Google ont le droit d'utiliser l'app
+        const ALLOWED_EMAILS = ["aureliemartial87@gmail.com", "jen.martial@gmail.com"];
+
         let unsubscribeSnapshot = null;
         let currentUserDocRef = null;
 
@@ -1013,6 +1016,13 @@
             const userAvatarMobile = document.getElementById('user-avatar-mobile');
             const appContent = document.getElementById('app-content');
             const loggedOutScreen = document.getElementById('logged-out-screen');
+
+            if (user && !ALLOWED_EMAILS.includes(user.email)) {
+                // Compte Google non autorisé : déconnexion immédiate
+                alert("⛔ Ce compte Google n'est pas autorisé à accéder à cette application.");
+                signOut(auth);
+                return;
+            }
 
             if (user) {
                 // Utilisateur connecté
