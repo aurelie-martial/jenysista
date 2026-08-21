@@ -105,6 +105,35 @@
                 padding-right: 6px !important;
             }
         }
+
+        /* Champs montants du budget (Ressources/Fixe/Variable/Épargne) : pas de flèches
+           d'incrémentation, pour laisser toute la place au chiffre + au signe €. */
+        .budget-amount-input::-webkit-outer-spin-button,
+        .budget-amount-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .budget-amount-input {
+            -moz-appearance: textfield;
+            font-size: 12px !important;
+        }
+        /* Libellés (Crédit, Syndic, Course, Boucherie...) dans Fixe/Variable : même taille que le
+           reste du plan budgétaire (Découvert, Total fixe...), y compris sur mobile où la règle
+           anti-zoom forcerait sinon 16px sur ces champs texte. */
+        .budget-text-input {
+            font-size: 12px !important;
+        }
+
+        /* Exceptions à la règle anti-zoom mobile ci-dessus pour les champs montants/libellés du Budget */
+        @media (max-width: 767px) {
+            input.budget-amount-input {
+                font-size: 12px !important;
+                padding-right: 1px !important;
+            }
+            input.budget-text-input {
+                font-size: 12px !important;
+            }
+        }
     </style>
 </head>
 <body class="text-slate-700 min-h-screen flex flex-col">
@@ -166,8 +195,8 @@
                     <button onclick="switchTab('agenda')" id="btn-agenda" class="tab-btn flex-1 md:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900">
                         🗓️ Agenda
                     </button>
-                    <button onclick="switchTab('sport')" id="btn-sport" class="tab-btn flex-1 md:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900">
-                        💪 Sport
+                    <button onclick="switchTab('budget')" id="btn-budget" class="tab-btn flex-1 md:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900">
+                        💰 Budget
                     </button>
                     <button onclick="switchTab('recipes')" id="btn-recipes" class="tab-btn flex-1 md:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 text-slate-600 hover:text-slate-900">
                         🍳 Recette
@@ -497,148 +526,112 @@
         </section>
 
 
-        <!-- ================= PARTIE SPORT ================= -->
-        <section id="sport" class="tab-content space-y-6">
-            <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-xs">
-                <h2 class="text-base sm:text-lg font-bold text-slate-800">Suivi Sport & Corps</h2>
-                <p class="text-xs text-slate-400 mt-0.5">Poids, composition corporelle et activités physiques</p>
-            </div>
-
-            <!-- Graphiques -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                        <span class="w-2 h-5 bg-pink-500 rounded-xs inline-block"></span> Poids & répartition muscle / gras
-                    </h3>
-                    <div class="h-56">
-                        <canvas id="sport-measurements-chart"></canvas>
-                    </div>
-                    <p class="text-[10px] text-slate-400 mt-2">La courbe trace le poids ; la zone en dessous répartit la masse musculaire (vert) et la masse grasse (orange) selon leurs proportions.</p>
+        <!-- ================= PARTIE BUDGET ================= -->
+        <section id="budget" class="tab-content space-y-6">
+            <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-base sm:text-lg font-bold text-slate-800">Budget mensuel</h2>
                 </div>
-                <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                        <span class="w-2 h-5 bg-emerald-500 rounded-xs inline-block"></span> Séances de sport & calories dépensées
-                    </h3>
-                    <div class="h-56">
-                        <canvas id="sport-activity-chart"></canvas>
-                    </div>
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    <button onclick="navigateBudgetMonth(-1)" class="px-2 sm:px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg shadow-xs font-bold text-sm transition-colors">←</button>
+                    <span id="budget-month-label" class="text-xs sm:text-sm font-bold text-indigo-700 min-w-[110px] text-center"></span>
+                    <button onclick="navigateBudgetMonth(1)" class="px-2 sm:px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg shadow-xs font-bold text-sm transition-colors">→</button>
+                    <button onclick="goToBudgetCurrentMonth()" class="ml-1 px-2 sm:px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-[11px] sm:text-xs font-semibold transition-colors whitespace-nowrap">Mois en cours</button>
                 </div>
             </div>
-
-            <!-- Formulaires d'ajout -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <span class="w-2 h-5 bg-sky-400 rounded-xs inline-block"></span> Nouvelle mesure
-                    </h3>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Date</label>
-                            <input type="date" id="new-measure-date" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-100">
+            <!-- Budget : Plan (Résumé + Fixe/Variable/Épargne) à gauche, Transactions à droite sur
+                 desktop. Sur mobile, l'ajout de transaction + l'historique passent en premier
+                 (ordre géré via "order", la position en colonnes via "lg:col-start"). -->
+            <div class="grid grid-cols-1 lg:grid-cols-[1.8fr_3.2fr] gap-6 items-start">
+                <!-- BLOC TRANSACTIONS : en premier sur mobile, colonne de droite sur desktop -->
+                <div class="order-1 lg:order-2 lg:col-start-2 space-y-6">
+                    <!-- Transactions : le bouton d'ajout (champs en overlay) est juste à côté du titre -->
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="p-4 bg-slate-50/50 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                            <h3 class="font-bold text-slate-800 text-sm">Transactions</h3>
+                            <button onclick="openNewTransactionOverlay()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-1.5 px-3 rounded-xl shadow-xs transition-colors text-xs flex items-center justify-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                                Ajouter une transaction
+                            </button>
                         </div>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Poids (kg)</label>
-                                <input type="number" step="0.1" id="new-measure-weight" placeholder="65.5" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-pink-400">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Masse grasse (%)</label>
-                                <input type="number" step="0.1" id="new-measure-fat" placeholder="22" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-pink-400">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Masse musc. (%)</label>
-                                <input type="number" step="0.1" id="new-measure-muscle" placeholder="35" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-pink-400">
-                            </div>
+                        <div class="p-4 overflow-x-auto max-h-[34rem] overflow-y-auto">
+                            <table class="w-full text-left border-collapse table-fixed">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                                        <th class="py-2 px-1.5 w-[18%]">Date</th>
+                                        <th class="py-2 px-1.5 w-[20%]">Cat.</th>
+                                        <th class="py-2 px-1.5">Libellé</th>
+                                        <th class="py-2 px-1.5 text-right w-[20%]">Montant</th>
+                                        <th class="py-2 px-1.5 text-right w-[10%]"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="budget-transactions-tbody" class="text-xs text-slate-600"></tbody>
+                            </table>
                         </div>
-                        <button onclick="addSportMeasurement()" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-medium py-2.5 px-4 rounded-xl shadow-xs transition-colors text-sm flex items-center justify-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                            Enregistrer la mesure
-                        </button>
                     </div>
                 </div>
-
-                <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <span class="w-2 h-5 bg-emerald-400 rounded-xs inline-block"></span> Nouvelle activité
-                    </h3>
-                    <div class="space-y-3">
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Date</label>
-                                <input type="date" id="new-activity-date" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-400">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Type</label>
-                                <select id="new-activity-type" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-emerald-400">
-                                    <option value="Renfo">🏋️ Renfo</option>
-                                    <option value="Run">🏃 Run</option>
-                                    <option value="Marche">🚶 Marche</option>
-                                    <option value="Autre">✨ Autre activité</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Nom / description</label>
-                            <input type="text" id="new-activity-name" placeholder="Ex: Course à pied, Musculation..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-400">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Durée (min)</label>
-                                <input type="number" id="new-activity-duration" placeholder="30" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-400">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Calories (kcal)</label>
-                                <input type="number" id="new-activity-calories" placeholder="250" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-emerald-400">
-                            </div>
-                        </div>
-                        <button onclick="addSportActivity()" class="w-full bg-emerald-400 hover:bg-emerald-500 text-white font-medium py-2.5 px-4 rounded-xl shadow-xs transition-colors text-sm flex items-center justify-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                            Enregistrer l'activité
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Historiques -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div class="p-4 bg-slate-50/50 border-b border-slate-100">
-                        <h3 class="font-bold text-slate-800 text-sm">Historique des mesures</h3>
-                    </div>
-                    <div class="p-4 overflow-x-auto max-h-80 overflow-y-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-slate-200 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                                    <th class="py-2 px-1.5">Date</th>
-                                    <th class="py-2 px-1.5">Poids</th>
-                                    <th class="py-2 px-1.5">Gr.</th>
-                                    <th class="py-2 px-1.5">Musc.</th>
-                                    <th class="py-2 px-1.5 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sport-measurements-tbody" class="divide-y divide-slate-100 text-sm text-slate-600"></tbody>
+                <!-- BLOC PLAN BUDGÉTAIRE (saisie manuelle, façon tableur) : en second sur mobile, colonne de gauche sur desktop -->
+                <div class="order-2 lg:order-1 lg:col-start-1 space-y-6 min-w-0">
+                    <!-- Résumé (pas de titre : le bloc s'identifie déjà par son contenu) -->
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <table class="w-full text-xs">
+                            <tbody id="budget-plan-ressources-tbody"></tbody>
                         </table>
                     </div>
-                </div>
-
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div class="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between gap-2">
-                        <h3 class="font-bold text-slate-800 text-sm">Historique des activités</h3>
-                        <span id="sport-calories-week-badge" class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 whitespace-nowrap">0 kcal / 7j</span>
+                    <!-- Dépenses fixes -->
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="px-3 py-2 bg-rose-300 text-rose-900 flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wide">Fixe</span>
+                            <span id="budget-plan-fixe-percent" class="text-xs font-bold bg-white/40 px-2 py-0.5 rounded-full">0% du salaire</span>
+                        </div>
+                        <div class="p-3">
+                            <table class="w-full text-xs border-collapse table-fixed">
+                                <tbody id="budget-plan-fixe-tbody" class="divide-y divide-rose-100"></tbody>
+                            </table>
+                            <div class="mt-2 text-center">
+                                <button onclick="addBudgetPlanLine('fixe')" class="text-xs font-semibold text-rose-500 hover:text-rose-700">+ Ajouter une ligne</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="p-4 overflow-x-auto max-h-80 overflow-y-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-slate-200 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                                    <th class="py-2 px-1.5">Date</th>
-                                    <th class="py-2 px-1.5">Activité</th>
-                                    <th class="py-2 px-1.5">Durée</th>
-                                    <th class="py-2 px-1.5">Kcal</th>
-                                    <th class="py-2 px-1.5 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="sport-activities-tbody" class="divide-y divide-slate-100 text-sm text-slate-600"></tbody>
-                        </table>
+                    <!-- Dépenses variables -->
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="px-3 py-2 bg-amber-400 text-white flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wide">Variable</span>
+                            <span id="budget-plan-variable-percent" class="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">0% du salaire</span>
+                        </div>
+                        <div class="p-3">
+                            <table class="w-full text-xs border-collapse table-fixed">
+                                <tbody id="budget-plan-variable-tbody" class="divide-y divide-amber-100"></tbody>
+                            </table>
+                            <div class="mt-2 text-center">
+                                <button onclick="addBudgetPlanLine('variable')" class="text-xs font-semibold text-amber-600 hover:text-amber-800">+ Ajouter une ligne</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Épargne -->
+                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                        <div class="px-3 py-2 bg-emerald-500 text-white flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wide">Épargne</span>
+                            <span id="budget-plan-epargne-percent" class="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">0% du salaire</span>
+                        </div>
+                        <div class="p-3">
+                            <table class="w-full text-xs border-collapse table-fixed">
+                                <tbody id="budget-plan-epargne-tbody" class="divide-y divide-emerald-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!-- BLOC CATÉGORIES : toujours en dernier -->
+                <div class="order-3 lg:order-3 lg:col-start-2 space-y-6">
+                    <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-800 mb-4">Catégories</h3>
+                        <div>
+                            <div class="flex flex-wrap gap-2 mb-2">
+                                <input type="text" id="new-budget-cat-depense" placeholder="Nouvelle catégorie..." onkeydown="if(event.key==='Enter'){event.preventDefault();addBudgetCategory('depense');}" class="w-32 sm:w-40 px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-rose-400">
+                                <button onclick="addBudgetCategory('depense')" class="bg-rose-400 hover:bg-rose-500 text-white font-medium px-3 py-2 rounded-xl text-xs transition-colors whitespace-nowrap">+ Ajouter</button>
+                            </div>
+                            <div id="budget-cat-list-depense" class="flex flex-wrap gap-1.5"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -985,6 +978,39 @@
         </div>
     </div>
 
+    <!-- MODAL : NOUVELLE TRANSACTION (BUDGET) -->
+    <div id="budget-tx-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-100 max-w-md w-full overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-slate-800 text-sm">Nouvelle transaction</h3>
+                <button onclick="closeNewTransactionOverlay()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+            </div>
+            <div class="p-6 space-y-3">
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Date</label>
+                    <input type="date" id="new-budget-date" onkeydown="if(event.key==='Enter'){event.preventDefault();addBudgetTransaction();}" class="w-36 px-2.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-400">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Catégorie</label>
+                    <div id="new-budget-category-chips" class="flex flex-wrap gap-1.5"></div>
+                    <input type="hidden" id="new-budget-category">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Libellé</label>
+                    <input type="text" id="new-budget-label" placeholder="Ex: Courses Carrefour" onkeydown="if(event.key==='Enter'){event.preventDefault();addBudgetTransaction();}" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-400">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Montant (€)</label>
+                    <input type="text" inputmode="decimal" id="new-budget-amount" placeholder="50" onkeydown="if(event.key==='Enter'){event.preventDefault();addBudgetTransaction();}" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-400">
+                </div>
+                <button onclick="addBudgetTransaction()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2.5 px-4 rounded-xl shadow-xs transition-colors text-sm flex items-center justify-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    Ajouter
+                </button>
+            </div>
+        </div>
+    </div>
+
     <footer class="bg-white border-t border-slate-100 py-6 mt-12 text-center text-xs text-slate-400">
         <p>© Made in Jeny - 2026</p>
     </footer>
@@ -1103,8 +1129,10 @@
                         window.recipes = data.recipes || window.recipes;
                         window.agendaEvents = data.agendaEvents || window.agendaEvents;
                         window.agendaPasswordNotes = data.agendaPasswordNotes || window.agendaPasswordNotes;
-                        window.sportMeasurements = data.sportMeasurements || window.sportMeasurements;
-                        window.sportActivities = data.sportActivities || window.sportActivities;
+                        window.budgetTransactions = data.budgetTransactions || window.budgetTransactions;
+                        window.budgetCategories = data.budgetCategories || window.budgetCategories;
+                        window.budgetTargets = data.budgetTargets || window.budgetTargets;
+                        window.budgetPlan = data.budgetPlan || window.budgetPlan;
                         window.mealPlans = data.mealPlans || window.mealPlans;
 
                         renderHabits();
@@ -1114,7 +1142,7 @@
                         renderPlanGoals();
                         renderAgenda();
                         renderPasswordNotes();
-                        renderSport();
+                        renderBudget();
                     } else {
                         saveData(); // Première sauvegarde si les données n'existent pas encore pour cet utilisateur
                     }
@@ -1148,8 +1176,10 @@
                 recipes: window.recipes,
                 agendaEvents: window.agendaEvents,
                 agendaPasswordNotes: window.agendaPasswordNotes,
-                sportMeasurements: window.sportMeasurements,
-                sportActivities: window.sportActivities,
+                budgetTransactions: window.budgetTransactions,
+                budgetCategories: window.budgetCategories,
+                budgetTargets: window.budgetTargets,
+                budgetPlan: window.budgetPlan,
                 mealPlans: window.mealPlans
             };
 
@@ -1223,9 +1253,30 @@
             }
         ];
 
-        // --- DONNÉES SPORT (poids, composition corporelle, activités) ---
-        window.sportMeasurements = []; // { id, date: 'YYYY-MM-DD', weight, bodyFat, muscleMass }
-        window.sportActivities = [];   // { id, date: 'YYYY-MM-DD', type, name, duration, calories }
+        // --- DONNÉES BUDGET ---
+        window.budgetTransactions = []; // { id, date: 'YYYY-MM-DD', type: 'depense'|'revenu', category, label, amount }
+        window.budgetCategories = {
+            depense: ["Logement", "Alimentation", "Transport", "Loisirs", "Abonnements", "Santé", "Autre"],
+            revenu: ["Salaire", "Autre revenu"]
+        };
+        window.budgetTargets = {}; // legacy, gardé pour compat (plus vraiment utilisé dans le rendu)
+        // --- PLAN BUDGÉTAIRE (Ressources + Fixe/Variable/Épargne) ---
+        // Tableau saisi entièrement à la main (Prévu ET Réel), façon tableur, indépendant des
+        // transactions ci-dessus. C'est un budget mensuel "type" qu'on ajuste au fil de l'eau,
+        // pas rattaché à un mois précis.
+        window.budgetPlan = {
+            ressources: {
+                salaire: 0,
+                decouvert: 0
+            },
+            fixe: [
+                { id: 1, label: "", prevu: 0, reel: 0 }
+            ],
+            variable: [
+                { id: 2, label: "", prevu: 0, reel: 0 }
+            ],
+            epargne: { prevu: 0, reel: 0 }
+        };
 
         // --- DONNÉES SEMAINIER (planning de repas) ---
         // Clé = date ISO ('YYYY-MM-DD') du jour concerné -> { lunch, dinner }
@@ -1272,8 +1323,8 @@
                 renderAgenda();
             }
 
-            if (tabId === 'sport' && typeof renderSportCharts === 'function') {
-                requestAnimationFrame(renderSportCharts);
+            if (tabId === 'budget' && typeof renderBudget === 'function') {
+                renderBudget();
             }
         }
 
@@ -1311,6 +1362,7 @@
 
         const agendaDayHeaders = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
         const agendaMonthNames = ["Janv.", "Févr.", "Mars", "Avr.", "Mai", "Juin", "Juil.", "Août", "Sept.", "Oct.", "Nov.", "Déc."];
+        const monthsShortList = ["Janv.", "Févr.", "Mars", "Avril", "Mai", "Juin", "Juil.", "Août", "Sept.", "Oct.", "Nov.", "Déc."];
 
         window.agendaViewMode = 'month';
         window.agendaCurrentDate = new Date();
@@ -3094,360 +3146,484 @@
             renderPlanGoals();
         }
 
-        // --- SUIVI SPORT : MESURES CORPORELLES & ACTIVITÉS ---
-        let sportMeasurementsChartInstance = null;
-        let sportActivityChartInstance = null;
-
-        function formatDateFR(dateStr) {
-            const d = new Date(dateStr + 'T00:00:00');
-            return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        // ============ BUDGET ============
+        window.budgetMonthOffset = 0; // décalage en mois par rapport au mois en cours
+        function formatEuro(n) {
+            const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+            return Number.isInteger(rounded) ? `${rounded} €` : `${rounded.toFixed(2)} €`;
         }
-
-        // Anciennes activités enregistrées avec le type "Sport" (avant le renommage en "Renfo")
-        function normalizeActivityType(type) {
-            return type === 'Sport' ? 'Renfo' : type;
+        // Lit un montant saisi à la main, en acceptant la virgule ou le point comme séparateur décimal.
+        function parseAmount(str) {
+            const num = parseFloat(String(str).trim().replace(',', '.').replace(/\s/g, ''));
+            return isNaN(num) ? 0 : num;
         }
-
-        function addSportMeasurement() {
-            const dateInput = document.getElementById('new-measure-date');
-            const weightInput = document.getElementById('new-measure-weight');
-            const fatInput = document.getElementById('new-measure-fat');
-            const muscleInput = document.getElementById('new-measure-muscle');
-
-            const date = dateInput.value || formatDateISO(new Date());
-            const weight = weightInput.value !== '' ? parseFloat(weightInput.value) : null;
-            const bodyFat = fatInput.value !== '' ? parseFloat(fatInput.value) : null;
-            const muscleMass = muscleInput.value !== '' ? parseFloat(muscleInput.value) : null;
-
-            if (weight === null && bodyFat === null && muscleMass === null) {
-                alert("Merci de renseigner au moins une valeur (poids, masse grasse ou masse musculaire).");
+        // Affiche toujours 2 décimales avec la virgule française, pour ne jamais perdre un "13,60"
+        // qui redeviendrait "13,6" une fois réaffiché depuis le nombre stocké.
+        function formatAmountForInput(n) {
+            const num = parseFloat(n) || 0;
+            return num.toFixed(2).replace('.', ',');
+        }
+        // Le salaire tombe autour du 20 du mois (20, 21 ou 22 selon les mois) : "un mois" dans le
+        // budget correspond donc à une période à cheval sur 2 mois calendaires (ex: 20 août ->
+        // 19 septembre), pas à un mois calendaire classique. On fixe le repère au 20 pour le
+        // découpage des périodes (la date exacte de virement peut varier de quelques jours sans
+        // que ça change la période à laquelle une dépense est rattachée).
+        // -> Si Jenysista est payée à une autre date, change juste ce chiffre.
+        window.BUDGET_PERIOD_START_DAY = 20;
+        // Renvoie le 1er jour (le "20") de la période budgétaire en cours (sans décalage de mois).
+        function getBudgetPeriodAnchor() {
+            const now = new Date();
+            const anchor = new Date(now.getFullYear(), now.getMonth(), window.BUDGET_PERIOD_START_DAY);
+            if (now.getDate() < window.BUDGET_PERIOD_START_DAY) anchor.setMonth(anchor.getMonth() - 1);
+            return anchor;
+        }
+        // Renvoie le 1er jour (le "20") de la période affichée, en tenant compte de la navigation
+        // mois précédent/suivant (window.budgetMonthOffset).
+        function getBudgetMonthDate() {
+            const base = getBudgetPeriodAnchor();
+            base.setMonth(base.getMonth() + window.budgetMonthOffset);
+            return base;
+        }
+        // Bornes [début inclus, fin exclue) de la période budgétaire qui commence à periodStart.
+        function getBudgetPeriodRange(periodStart) {
+            const start = new Date(periodStart);
+            const endExclusive = new Date(start);
+            endExclusive.setMonth(endExclusive.getMonth() + 1);
+            return { startISO: formatDateISO(start), endISO: formatDateISO(endExclusive) };
+        }
+        function isDateInBudgetPeriod(dateStr, periodStart) {
+            if (!dateStr) return false;
+            const { startISO, endISO } = getBudgetPeriodRange(periodStart);
+            return dateStr >= startISO && dateStr < endISO;
+        }
+        function navigateBudgetMonth(delta) {
+            window.budgetMonthOffset += delta;
+            renderBudget();
+        }
+        function goToBudgetCurrentMonth() {
+            window.budgetMonthOffset = 0;
+            renderBudget();
+        }
+        // Les transactions ne servent qu'à suivre les dépenses (le salaire est saisi une
+        // fois pour toutes dans "Ressources") : plus de sélecteur Type, tout est une dépense.
+        // La catégorie se choisit en cliquant directement sur un tag coloré (pas de menu
+        // déroulant) : "new-budget-category" reste un champ caché qui porte la valeur choisie.
+        function refreshBudgetCategoryOptions() {
+            const chipsEl = document.getElementById('new-budget-category-chips');
+            const hiddenInput = document.getElementById('new-budget-category');
+            if (!chipsEl || !hiddenInput) return;
+            const cats = [...(window.budgetCategories.depense || [])].sort((a, b) => a.localeCompare(b, 'fr'));
+            if (!cats.includes(hiddenInput.value)) hiddenInput.value = cats[0] || '';
+            chipsEl.innerHTML = cats.map(c => {
+                const col = getBudgetCategoryColor(c);
+                const isSelected = c === hiddenInput.value;
+                return `<button type="button" onclick="selectNewBudgetCategory('${c.replace(/'/g, "\\'")}')" class="inline-flex items-center ${col.bg} ${col.text} rounded-full px-2.5 py-1 text-xs font-medium border-2 ${isSelected ? col.border + ' ring-2 ring-offset-1 ring-indigo-300' : 'border-transparent opacity-60 hover:opacity-100'} transition-all">${c}</button>`;
+            }).join('');
+        }
+        function selectNewBudgetCategory(name) {
+            const hiddenInput = document.getElementById('new-budget-category');
+            if (hiddenInput) hiddenInput.value = name;
+            refreshBudgetCategoryOptions();
+        }
+        // Quand une transaction est catégorisée avec le même nom qu'une ligne de dépense variable
+        // (ex: "Course", "Boucherie", "Ongles", "Ticket resto"), on répercute automatiquement le
+        // montant sur le "Réel" de cette ligne, pour ne pas avoir à le ressaisir à la main.
+        function applyTransactionToVariableReel(category, amount, sign) {
+            if (!category) return;
+            const norm = s => (s || '').trim().toLowerCase();
+            const line = (window.budgetPlan.variable || []).find(l => norm(l.label) === norm(category));
+            if (!line) return;
+            const updated = (parseFloat(line.reel) || 0) + sign * amount;
+            line.reel = updated < 0 ? 0 : updated;
+        }
+        // Overlay "Nouvelle transaction" : les champs ne sont visibles qu'une fois le bouton
+        // "Ajouter une transaction" cliqué, pour ne pas encombrer la page en permanence.
+        function openNewTransactionOverlay() {
+            const modal = document.getElementById('budget-tx-modal');
+            if (!modal) return;
+            const dateEl = document.getElementById('new-budget-date');
+            if (dateEl && !dateEl.value) dateEl.value = formatDateISO(new Date());
+            refreshBudgetCategoryOptions();
+            modal.classList.remove('hidden');
+        }
+        function closeNewTransactionOverlay() {
+            const modal = document.getElementById('budget-tx-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+        function addBudgetTransaction() {
+            const date = document.getElementById('new-budget-date').value;
+            const category = document.getElementById('new-budget-category').value;
+            const label = document.getElementById('new-budget-label').value.trim();
+            const amount = parseAmount(document.getElementById('new-budget-amount').value);
+            if (!date || !category || amount <= 0) {
+                alert("Merci de renseigner au moins la date, la catégorie et un montant valide.");
                 return;
             }
-
-            window.sportMeasurements.push({ id: Date.now(), date, weight, bodyFat, muscleMass });
-
-            weightInput.value = '';
-            fatInput.value = '';
-            muscleInput.value = '';
-
+            window.budgetTransactions.push({ id: Date.now(), date, type: 'depense', category, label, amount });
+            applyTransactionToVariableReel(category, amount, 1);
+            document.getElementById('new-budget-label').value = '';
+            document.getElementById('new-budget-amount').value = '';
             saveData();
-            renderSport();
+            renderBudget();
+            closeNewTransactionOverlay();
         }
-
-        function deleteSportMeasurement(id) {
-            window.sportMeasurements = window.sportMeasurements.filter(m => m.id !== id);
+        function deleteBudgetTransaction(id) {
+            const tx = window.budgetTransactions.find(t => t.id === id);
+            if (tx) applyTransactionToVariableReel(tx.category, tx.amount, -1);
+            window.budgetTransactions = window.budgetTransactions.filter(t => t.id !== id);
             saveData();
-            renderSport();
+            renderBudget();
         }
-
-        function addSportActivity() {
-            const dateInput = document.getElementById('new-activity-date');
-            const typeInput = document.getElementById('new-activity-type');
-            const nameInput = document.getElementById('new-activity-name');
-            const durationInput = document.getElementById('new-activity-duration');
-            const caloriesInput = document.getElementById('new-activity-calories');
-
-            const date = dateInput.value || formatDateISO(new Date());
-            const type = typeInput.value;
+        function addBudgetCategory(type) {
+            const nameInput = document.getElementById(`new-budget-cat-${type}`);
             const name = nameInput.value.trim();
-            const duration = durationInput.value !== '' ? parseFloat(durationInput.value) : null;
-            const calories = caloriesInput.value !== '' ? parseFloat(caloriesInput.value) : null;
-
-            if (!name) {
-                alert("Merci d'indiquer un nom pour cette activité.");
+            if (!name) return;
+            if (!window.budgetCategories[type]) window.budgetCategories[type] = [];
+            if (window.budgetCategories[type].includes(name)) {
+                alert("Cette catégorie existe déjà.");
                 return;
             }
-
-            window.sportActivities.push({ id: Date.now(), date, type, name, duration, calories });
-
+            window.budgetCategories[type].push(name);
             nameInput.value = '';
-            durationInput.value = '';
-            caloriesInput.value = '';
-
             saveData();
-            renderSport();
+            renderBudget();
+            refreshBudgetCategoryOptions();
         }
-
-        function deleteSportActivity(id) {
-            window.sportActivities = window.sportActivities.filter(a => a.id !== id);
+        function deleteBudgetCategory(type, name) {
+            if (!confirm(`Supprimer la catégorie "${name}" ? Les transactions déjà enregistrées avec cette catégorie seront conservées.`)) return;
+            window.budgetCategories[type] = (window.budgetCategories[type] || []).filter(c => c !== name);
+            if (type === 'depense') delete window.budgetTargets[name];
             saveData();
-            renderSport();
+            renderBudget();
+            refreshBudgetCategoryOptions();
         }
-
-        function renderSportMeasurementsTable() {
-            const tbody = document.getElementById('sport-measurements-tbody');
-            if (!tbody) return;
-
-            const sorted = [...window.sportMeasurements].sort((a, b) => b.date.localeCompare(a.date));
-
-            if (sorted.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-xs text-slate-400">Aucune mesure enregistrée.</td></tr>`;
+        // --- PLAN BUDGÉTAIRE : Ressources + Fixe/Variable/Épargne (saisie manuelle façon tableur) ---
+        let budgetPlanLineCounter = Date.now();
+        function budgetPlanSectionTotal(section, field) {
+            return (window.budgetPlan[section] || []).reduce((s, l) => s + (parseFloat(l[field]) || 0), 0);
+        }
+        function updateBudgetPlanRessource(field, value) {
+            window.budgetPlan.ressources[field] = parseAmount(value);
+            saveData();
+            renderBudgetPlan();
+        }
+        function addBudgetPlanLine(section) {
+            if (!window.budgetPlan[section]) return;
+            budgetPlanLineCounter++;
+            window.budgetPlan[section].push({ id: budgetPlanLineCounter, label: '', prevu: 0, reel: 0 });
+            saveData();
+            renderBudgetPlan();
+        }
+        function deleteBudgetPlanLine(section, id) {
+            if (!window.budgetPlan[section]) return;
+            window.budgetPlan[section] = window.budgetPlan[section].filter(l => l.id !== id);
+            saveData();
+            renderBudgetPlan();
+        }
+        function updateBudgetPlanLine(section, id, field, value) {
+            const line = (window.budgetPlan[section] || []).find(l => l.id === id);
+            if (!line) return;
+            if (field === 'label') {
+                line.label = value;
+            } else {
+                line[field] = parseAmount(value);
+            }
+            saveData();
+            renderBudgetPlan();
+        }
+        function updateBudgetPlanEpargne(field, value) {
+            window.budgetPlan.epargne[field] = parseAmount(value);
+            saveData();
+            renderBudgetPlan();
+        }
+        // Ajoute une charge fixe telle quelle dans l'historique des transactions (date du jour),
+        // pour la pointer dès qu'elle est prélevée sans avoir à ressaisir le libellé et le montant.
+        function addFixeLineAsTransaction(id) {
+            const line = (window.budgetPlan.fixe || []).find(l => l.id === id);
+            if (!line) return;
+            const amount = parseFloat(line.prevu) || 0;
+            if (amount <= 0) {
+                alert("Renseigne d'abord un montant pour cette charge fixe.");
                 return;
             }
-
-            tbody.innerHTML = sorted.map(m => `
-                <tr class="hover:bg-slate-50/50 transition-colors">
-                    <td class="py-2 px-1.5 text-xs font-medium text-slate-600 whitespace-nowrap">${formatDateFR(m.date)}</td>
-                    <td class="py-2 px-1.5 text-xs">${m.weight !== null && m.weight !== undefined ? m.weight + ' kg' : '-'}</td>
-                    <td class="py-2 px-1.5 text-xs">${m.bodyFat !== null && m.bodyFat !== undefined ? m.bodyFat + '%' : '-'}</td>
-                    <td class="py-2 px-1.5 text-xs">${m.muscleMass !== null && m.muscleMass !== undefined ? m.muscleMass + '%' : '-'}</td>
-                    <td class="py-2 px-1.5 text-right">
-                        <button onclick="deleteSportMeasurement(${m.id})" class="text-slate-300 hover:text-rose-500 p-0.5" title="Supprimer">🗑️</button>
+            window.budgetTransactions.push({
+                id: Date.now(),
+                date: formatDateISO(new Date()),
+                type: 'depense',
+                category: 'Fixe',
+                label: line.label || '',
+                amount,
+                fixeLineId: line.id
+            });
+            saveData();
+            renderBudget();
+        }
+        // Palette de couleurs pour les tags de catégories du Budget. "Fixe" a une couleur grise
+        // réservée pour bien la distinguer des vraies catégories.
+        const budgetCategoryColorPalette = [
+            { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-200' },
+            { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200' },
+            { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' },
+            { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200' },
+            { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200' },
+            { bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-200' },
+            { bg: 'bg-pink-50', text: 'text-pink-600', border: 'border-pink-200' },
+            { bg: 'bg-orange-50', text: 'text-orange-600', border: 'border-orange-200' }
+        ];
+        const budgetFixeTagColor = { bg: 'bg-slate-200', text: 'text-slate-600', border: 'border-slate-300' };
+        function getBudgetCategoryColor(categoryName) {
+            if (categoryName === 'Fixe') return budgetFixeTagColor;
+            const cats = window.budgetCategories.depense || [];
+            const index = cats.indexOf(categoryName);
+            const colorIndex = index >= 0 ? index % budgetCategoryColorPalette.length : 0;
+            return budgetCategoryColorPalette[colorIndex];
+        }
+        // Tag coloré pour une catégorie (historique des transactions + gestion des catégories).
+        function budgetCategoryTag(categoryName) {
+            const c = getBudgetCategoryColor(categoryName);
+            return `<span class="inline-flex items-center ${c.bg} ${c.text} border ${c.border} rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap">${categoryName || '—'}</span>`;
+        }
+        // Champ montant avec le signe € affiché juste après, collé au chiffre. Champ texte (pas
+        // number) pour ne jamais perdre un zéro décimal saisi (ex: 13,60) et ne pas afficher les
+        // flèches d'incrémentation natives.
+        function budgetEuroInput(value, onchange, width, extraClass) {
+            return `
+                <div class="flex items-center justify-end gap-0.5">
+                    <input type="text" inputmode="decimal" value="${formatAmountForInput(value)}" onchange="${onchange}" class="budget-amount-input ${width || 'w-full'} ${extraClass || ''} bg-transparent text-xs text-slate-700 text-right focus:outline-none focus:border-b focus:border-indigo-300">
+                    <span class="text-slate-400 text-xs">€</span>
+                </div>
+            `;
+        }
+        // Rend une table Fixe ou Variable (lignes éditables + ligne Total). Le pourcentage du
+        // salaire est affiché en haut du bloc (badge dans l'en-tête coloré), pas dans le tableau.
+        // Les charges fixes n'ont qu'un seul montant (pas de distinction Prévu/Réel) ; seules les
+        // charges variables gardent les deux colonnes. Les charges fixes sont triées du montant
+        // le plus élevé au plus faible (l'ordre de saisie n'a pas d'importance ici).
+        function renderBudgetPlanTable(section) {
+            const tbody = document.getElementById(`budget-plan-${section}-tbody`);
+            if (!tbody) return;
+            const lines = window.budgetPlan[section] || [];
+            const showReel = section !== 'fixe';
+            const displayLines = section === 'fixe'
+                ? [...lines].sort((a, b) => (parseFloat(b.prevu) || 0) - (parseFloat(a.prevu) || 0))
+                : lines;
+            const totalPrevu = budgetPlanSectionTotal(section, 'prevu');
+            const totalReel = budgetPlanSectionTotal(section, 'reel');
+            const salaire = window.budgetPlan.ressources.salaire || 0;
+            const percent = salaire > 0 ? Math.round((totalPrevu / salaire) * 100) : 0;
+            const percentEl = document.getElementById(`budget-plan-${section}-percent`);
+            if (percentEl) percentEl.innerText = `${percent}% du salaire`;
+            // Charges fixes déjà pointées ce mois-ci (ajoutées via le bouton "+") : on grise la
+            // ligne pour indiquer que c'est déjà fait, sans empêcher un nouvel ajout si besoin.
+            const monthDateForFixe = getBudgetMonthDate();
+            const loggedFixeLineIds = new Set(
+                window.budgetTransactions
+                    .filter(t => isDateInBudgetPeriod(t.date, monthDateForFixe) && t.category === 'Fixe' && t.fixeLineId)
+                    .map(t => t.fixeLineId)
+            );
+            // Pas d'en-tête de colonnes (Libellé/Montant/Prévu/Réel retirés) : les largeurs de
+            // colonnes du tableau (table-fixed) sont donc portées directement par chaque ligne.
+            const montantWidth = section === 'fixe' ? 'w-24' : 'w-[4.5rem]';
+            const actionWidth = section === 'fixe' ? 'w-6' : 'w-5';
+            const rowsHtml = displayLines.map(l => {
+                const isLogged = section === 'fixe' && loggedFixeLineIds.has(l.id);
+                const struckClass = isLogged ? 'line-through' : '';
+                return `
+                <tr class="${isLogged ? 'opacity-40' : ''}">
+                    <td class="px-1.5 py-1.5 truncate">
+                        <input type="text" value="${(l.label || '').replace(/"/g, '&quot;')}" onchange="updateBudgetPlanLine('${section}', ${l.id}, 'label', this.value)" placeholder="Libellé" class="budget-text-input w-full bg-transparent text-xs text-slate-700 ${struckClass} focus:outline-none focus:border-b focus:border-indigo-300">
+                    </td>
+                    <td class="px-1 py-1.5 ${montantWidth}">
+                        <div class="flex items-center justify-end gap-0.5">
+                            ${section === 'fixe' ? `<button onclick="addFixeLineAsTransaction(${l.id})" class="shrink-0 w-4 h-4 flex items-center justify-center rounded-full bg-slate-200 hover:bg-emerald-200 text-slate-500 hover:text-emerald-700 text-[10px] font-bold leading-none transition-colors" title="Ajouter comme transaction du jour">+</button>` : ''}
+                            ${budgetEuroInput(l.prevu, `updateBudgetPlanLine('${section}', ${l.id}, 'prevu', this.value)`, null, struckClass)}
+                        </div>
+                    </td>
+                    ${showReel ? `
+                    <td class="px-1 py-1.5 ${montantWidth}">
+                        ${budgetEuroInput(l.reel, `updateBudgetPlanLine('${section}', ${l.id}, 'reel', this.value)`)}
+                    </td>` : ''}
+                    <td class="px-0.5 py-1.5 text-center whitespace-nowrap ${actionWidth}">
+                        <button onclick="deleteBudgetPlanLine('${section}', ${l.id})" class="text-slate-300 hover:text-rose-500 text-xs">✕</button>
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
+            tbody.innerHTML = rowsHtml + `
+                <tr class="bg-slate-800 text-white font-bold">
+                    <td class="px-1.5 py-1.5 text-xs uppercase">Total</td>
+                    <td class="px-1 py-1.5 text-right ${montantWidth}">${formatEuro(totalPrevu)}</td>
+                    ${showReel ? `<td class="px-1 py-1.5 text-right ${montantWidth}">${formatEuro(totalReel)}</td>` : ''}
+                    <td class="${actionWidth}"></td>
+                </tr>
+            `;
         }
-
-        function renderSportActivitiesTable() {
-            const tbody = document.getElementById('sport-activities-tbody');
-            if (!tbody) return;
-
-            const sorted = [...window.sportActivities].sort((a, b) => b.date.localeCompare(a.date));
-
-            if (sorted.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-xs text-slate-400">Aucune activité enregistrée.</td></tr>`;
-            } else {
-                const typeIcon = { Renfo: '🏋️', Run: '🏃', Marche: '🚶', Autre: '✨' };
-                tbody.innerHTML = sorted.map(a => `
-                    <tr class="hover:bg-slate-50/50 transition-colors">
-                        <td class="py-2 px-1.5 text-xs font-medium text-slate-600 whitespace-nowrap">${formatDateFR(a.date)}</td>
-                        <td class="py-2 px-1.5 text-xs">${typeIcon[normalizeActivityType(a.type)] || '✨'} ${a.name}</td>
-                        <td class="py-2 px-1.5 text-xs">${a.duration !== null && a.duration !== undefined ? a.duration + ' min' : '-'}</td>
-                        <td class="py-2 px-1.5 text-xs font-semibold text-emerald-600">${a.calories !== null && a.calories !== undefined ? a.calories : '-'}</td>
-                        <td class="py-2 px-1.5 text-right">
-                            <button onclick="deleteSportActivity(${a.id})" class="text-slate-300 hover:text-rose-500 p-0.5" title="Supprimer">🗑️</button>
+        // Rend le bloc Ressources + les 3 tables Fixe/Variable/Épargne. Tout est saisi à la main :
+        // seuls "Total fixe", "Total variable", "Epargne" et "Restant total" (Ressources) sont
+        // recalculés automatiquement à partir des lignes/valeurs saisies.
+        function renderBudgetPlan() {
+            const ressourcesTbody = document.getElementById('budget-plan-ressources-tbody');
+            if (!ressourcesTbody) return; // section pas encore présente dans le DOM
+            const r = window.budgetPlan.ressources;
+            const totalFixePrevu = budgetPlanSectionTotal('fixe', 'prevu');
+            const totalVariablePrevu = budgetPlanSectionTotal('variable', 'prevu');
+            const epargnePrevu = window.budgetPlan.epargne.prevu || 0;
+            const restantAvant = (r.salaire || 0) - (r.decouvert || 0) - totalFixePrevu - totalVariablePrevu - epargnePrevu;
+            // Transactions du mois en cours, hors charges "Fixe" (déjà comptées dans "Total fixe"
+            // ci-dessus) : sert à afficher l'impact réel des transactions saisies à la main.
+            const monthDateForPlan = getBudgetMonthDate();
+            const nonFixeTransactionsTotal = window.budgetTransactions
+                .filter(t => isDateInBudgetPeriod(t.date, monthDateForPlan) && t.category !== 'Fixe')
+                .reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+            const restantApres = restantAvant - nonFixeTransactionsTotal;
+            // Découvert : le "-", le montant et le "€" doivent rester collés ensemble. Une largeur
+            // fixe sur l'input laisserait un vide entre les chiffres et un des deux côtés (selon
+            // l'alignement) dès que le nombre est plus court que la largeur : on donne donc à
+            // l'input une largeur "ch" calée sur le nombre de caractères affichés, pour qu'il
+            // n'ait jamais plus de place que son contenu.
+            const editableRow = (label, field, value) => {
+                const valueStr = formatAmountForInput(value);
+                return `
+                <tr class="border-b border-slate-100">
+                    <td class="px-4 py-2 text-slate-600">${label}</td>
+                    <td class="px-4 py-2">
+                        <div class="flex items-center justify-end gap-0">
+                            <span class="text-slate-500">-</span>
+                            <input type="text" inputmode="decimal" value="${valueStr}" onchange="updateBudgetPlanRessource('${field}', this.value)" class="budget-amount-input bg-transparent text-xs text-slate-700 text-left focus:outline-none focus:border-b focus:border-indigo-300" style="width:${valueStr.length + 1}ch">
+                            <span class="text-slate-400 text-xs">€</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            };
+            const readonlyRow = (label, value) => `
+                <tr class="border-b border-slate-100">
+                    <td class="px-4 py-2 text-slate-600">${label}</td>
+                    <td class="px-4 py-2 text-right text-slate-700">-${formatEuro(value)}</td>
+                </tr>
+            `;
+            ressourcesTbody.innerHTML = `
+                <tr class="bg-slate-200">
+                    <td class="px-4 py-2 text-sm font-extrabold text-slate-800">SALAIRE</td>
+                    <td class="px-4 py-2">
+                        <div class="flex items-center justify-end gap-0.5">
+                            <input type="text" inputmode="decimal" value="${formatAmountForInput(r.salaire)}" onchange="updateBudgetPlanRessource('salaire', this.value)" class="budget-amount-input w-16 bg-transparent text-right font-extrabold text-slate-800 focus:outline-none" style="font-size:14px !important">
+                            <span class="text-sm font-extrabold text-slate-500">€</span>
+                        </div>
+                    </td>
+                </tr>
+                ${editableRow('Découvert', 'decouvert', r.decouvert)}
+                ${readonlyRow('Total fixe', totalFixePrevu)}
+                ${readonlyRow('Total variable', totalVariablePrevu)}
+                ${readonlyRow('Epargne', epargnePrevu)}
+                <tr class="bg-slate-200 font-bold">
+                    <td class="px-4 py-2 text-slate-800">Restant total avant transactions</td>
+                    <td class="px-4 py-2 text-right text-slate-800">${formatEuro(restantAvant)}</td>
+                </tr>
+                <tr class="border-b border-slate-100">
+                    <td class="px-4 py-2 text-slate-600">Transactions (hors Fixe)</td>
+                    <td class="px-4 py-2 text-right text-slate-700">-${formatEuro(nonFixeTransactionsTotal)}</td>
+                </tr>
+                <tr class="bg-slate-800 text-white font-bold">
+                    <td class="px-4 py-2">Restant total après transactions</td>
+                    <td class="px-4 py-2 text-right">${formatEuro(restantApres)}</td>
+                </tr>
+            `;
+            renderBudgetPlanTable('fixe');
+            renderBudgetPlanTable('variable');
+            // Épargne : un seul chiffre global (pas de lignes détaillées, pas d'ajout/suppression de ligne).
+            // Le pourcentage du salaire est affiché dans le badge d'en-tête, comme pour Fixe/Variable.
+            const epargneTbody = document.getElementById('budget-plan-epargne-tbody');
+            if (epargneTbody) {
+                const salaire = r.salaire || 0;
+                const percent = salaire > 0 ? Math.round((epargnePrevu / salaire) * 100) : 0;
+                const epargnePercentEl = document.getElementById('budget-plan-epargne-percent');
+                if (epargnePercentEl) epargnePercentEl.innerText = `${percent}% du salaire`;
+                epargneTbody.innerHTML = `
+                    <tr>
+                        <td class="px-2 py-1.5 text-slate-700">Mensuel</td>
+                        <td class="px-2 py-1.5 w-[4.5rem]">
+                            ${budgetEuroInput(window.budgetPlan.epargne.prevu, `updateBudgetPlanEpargne('prevu', this.value)`)}
+                        </td>
+                        <td class="px-2 py-1.5 w-[4.5rem]">
+                            ${budgetEuroInput(window.budgetPlan.epargne.reel, `updateBudgetPlanEpargne('reel', this.value)`)}
                         </td>
                     </tr>
-                `).join('');
-            }
-
-            const badge = document.getElementById('sport-calories-week-badge');
-            if (badge) {
-                const sevenDaysAgo = new Date();
-                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-                const sevenDaysAgoStr = formatDateISO(sevenDaysAgo);
-                const totalCalories = window.sportActivities
-                    .filter(a => a.date >= sevenDaysAgoStr && a.calories)
-                    .reduce((sum, a) => sum + (a.calories || 0), 0);
-                badge.innerText = `${totalCalories} kcal / 7j`;
+                    <tr class="bg-slate-800 text-white font-bold">
+                        <td class="px-2 py-1.5 text-xs uppercase">Total</td>
+                        <td class="px-2 py-1.5 text-right w-[4.5rem]">${formatEuro(epargnePrevu)}</td>
+                        <td class="px-2 py-1.5 text-right w-[4.5rem]">${formatEuro(window.budgetPlan.epargne.reel || 0)}</td>
+                    </tr>
+                `;
             }
         }
-
-        // Construit, pour chaque relevé, la répartition masse grasse / masse musculaire en kg,
-        // normalisée pour que les deux parts couvrent exactement tout le poids (répartition
-        // relative entre les deux, puisque leur somme brute ne correspond pas forcément à 100%
-        // du poids réel : eau, os, organes... ne sont pas suivis ici).
-        function buildBodyCompositionSeries(sortedMeasurements) {
-            const weightArr = [];
-            const fatKg = [];            // limite basse de la zone empilée (masse grasse seule)
-            const stackedTopKg = [];     // limite haute de la zone empilée (grasse + musculaire cumulées)
-            const fatKgRaw = [];
-            const muscleKgRaw = [];
-            const fatPercentArr = [];
-            const musclePercentArr = [];
-
-            sortedMeasurements.forEach(m => {
-                const w = (m.weight !== null && m.weight !== undefined) ? m.weight : null;
-                weightArr.push(w);
-
-                const fatPct = (m.bodyFat !== null && m.bodyFat !== undefined) ? m.bodyFat : null;
-                const musclePct = (m.muscleMass !== null && m.muscleMass !== undefined) ? m.muscleMass : null;
-                fatPercentArr.push(fatPct);
-                musclePercentArr.push(musclePct);
-
-                if (w === null || (fatPct === null && musclePct === null)) {
-                    fatKg.push(null);
-                    stackedTopKg.push(null);
-                    fatKgRaw.push(null);
-                    muscleKgRaw.push(null);
-                    return;
+        function renderBudget() {
+            const label = document.getElementById('budget-month-label');
+            if (!label) return; // section pas encore présente dans le DOM
+            const monthDate = getBudgetMonthDate();
+            const periodEndInclusive = new Date(monthDate);
+            periodEndInclusive.setMonth(periodEndInclusive.getMonth() + 1);
+            periodEndInclusive.setDate(periodEndInclusive.getDate() - 1);
+            const startLabel = monthsShortList[monthDate.getMonth()];
+            const endLabel = monthsShortList[periodEndInclusive.getMonth()];
+            label.innerText = startLabel === endLabel
+                ? `${startLabel} ${periodEndInclusive.getFullYear()}`
+                : `${startLabel}-${endLabel} ${periodEndInclusive.getFullYear()}`;
+            const monthTransactions = window.budgetTransactions.filter(t => isDateInBudgetPeriod(t.date, monthDate));
+            renderBudgetPlan();
+            const depenseCategories = [...(window.budgetCategories.depense || [])].sort((a, b) => a.localeCompare(b, 'fr'));
+            // Liste de catégories (gestion)
+            const depenseListEl = document.getElementById('budget-cat-list-depense');
+            if (depenseListEl) {
+                depenseListEl.innerHTML = depenseCategories.map(c => {
+                    const col = getBudgetCategoryColor(c);
+                    return `
+                    <span class="inline-flex items-center gap-1 ${col.bg} ${col.text} border ${col.border} rounded-full px-2.5 py-1 text-xs font-medium">
+                        ${c}
+                        <button onclick="deleteBudgetCategory('depense', '${c.replace(/'/g, "\\'")}')" class="${col.text} hover:opacity-70 ml-0.5">✕</button>
+                    </span>
+                `;
+                }).join('');
+            }
+            // Historique des transactions du mois, les plus récemment ajoutées en premier
+            // (tri par date, puis par id de création en cas d'égalité de date).
+            const tbody = document.getElementById('budget-transactions-tbody');
+            if (tbody) {
+                const sorted = [...monthTransactions].sort((a, b) => b.date.localeCompare(a.date) || (b.id - a.id));
+                if (sorted.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-400">Aucune transaction ce mois-ci.</td></tr>`;
+                } else {
+                    tbody.innerHTML = sorted.map((t, idx) => {
+                        // Séparation fine et grise entre 2 transactions d'un même jour ; séparation
+                        // nettement plus foncée et épaisse au changement de jour, pour bien repérer
+                        // où commence/finit chaque journée.
+                        const dayChanged = idx > 0 && t.date !== sorted[idx - 1].date;
+                        const borderClass = idx === 0 ? '' : (dayChanged ? 'border-t-4 border-slate-600' : 'border-t border-slate-100');
+                        return `
+                        <tr class="${borderClass}">
+                            <td class="py-2 px-1.5 whitespace-nowrap">${new Date(t.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}</td>
+                            <td class="py-2 px-1.5 truncate">${budgetCategoryTag(t.category)}</td>
+                            <td class="py-2 px-1.5 text-slate-500 truncate">${t.label || '—'}</td>
+                            <td class="py-2 px-1.5 text-right font-semibold whitespace-nowrap ${t.type === 'revenu' ? 'text-emerald-600' : 'text-rose-500'}">${t.type === 'revenu' ? '+' : '-'}${t.amount.toFixed(2)} €</td>
+                            <td class="py-2 px-1.5 text-right whitespace-nowrap">
+                                <button onclick="deleteBudgetTransaction(${t.id})" class="text-slate-400 hover:text-rose-500 p-1 text-xs">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                    }).join('');
                 }
-
-                const totalPct = (fatPct || 0) + (musclePct || 0);
-                let fatShareKg = 0;
-                let muscleShareKg = 0;
-                if (totalPct > 0) {
-                    fatShareKg = w * ((fatPct || 0) / totalPct);
-                    muscleShareKg = w * ((musclePct || 0) / totalPct);
-                }
-
-                fatShareKg = Math.round(fatShareKg * 10) / 10;
-                muscleShareKg = Math.round(muscleShareKg * 10) / 10;
-
-                fatKg.push(fatShareKg);
-                stackedTopKg.push(Math.round((fatShareKg + muscleShareKg) * 10) / 10);
-                fatKgRaw.push(fatShareKg);
-                muscleKgRaw.push(muscleShareKg);
-            });
-
-            return { weightArr, fatKg, stackedTopKg, fatKgRaw, muscleKgRaw, fatPercentArr, musclePercentArr };
-        }
-
-        function renderSportCharts() {
-            if (typeof Chart === 'undefined') return;
-
-            const measurementsCanvas = document.getElementById('sport-measurements-chart');
-            const activityCanvas = document.getElementById('sport-activity-chart');
-            if (!measurementsCanvas || !activityCanvas) return;
-
-            // --- Graphique combiné : une seule courbe (le poids), la zone en dessous étant
-            // répartie entre masse grasse et masse musculaire selon leurs proportions respectives.
-            const sortedMeasurements = [...window.sportMeasurements].sort((a, b) => a.date.localeCompare(b.date));
-            const measurementLabels = sortedMeasurements.map(m => formatDateFR(m.date));
-            const comp = buildBodyCompositionSeries(sortedMeasurements);
-
-            if (sportMeasurementsChartInstance) sportMeasurementsChartInstance.destroy();
-            sportMeasurementsChartInstance = new Chart(measurementsCanvas.getContext('2d'), {
-                type: 'line',
-                data: {
-                    labels: measurementLabels,
-                    datasets: [
-                        {
-                            label: 'Masse grasse (kg)',
-                            data: comp.fatKg,
-                            borderColor: '#f59e0b',
-                            backgroundColor: '#f59e0b55',
-                            borderWidth: 1,
-                            pointRadius: 0,
-                            tension: 0.3,
-                            fill: 'origin'
-                        },
-                        {
-                            label: 'Masse musculaire (kg)',
-                            data: comp.stackedTopKg,
-                            borderColor: '#10b981',
-                            backgroundColor: '#10b98155',
-                            borderWidth: 1,
-                            pointRadius: 0,
-                            tension: 0.3,
-                            fill: '-1'
-                        },
-                        {
-                            label: 'Poids (kg)',
-                            data: comp.weightArr,
-                            borderColor: '#6366f1',
-                            backgroundColor: 'transparent',
-                            borderWidth: 2.5,
-                            pointRadius: 3,
-                            pointBackgroundColor: '#6366f1',
-                            tension: 0.3,
-                            spanGaps: true,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    // Survol/clic n'importe où sur une même date affiche les 3 valeurs ensemble
-                    // (poids + masse musculaire + masse grasse), pas seulement celle du trait
-                    // exactement pointé (utile car les aires grasse/musculaire n'ont pas de point visible).
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } },
-                        tooltip: {
-                            // Ordre d'affichage dans l'infobulle : Poids, puis Masse musculaire, puis Masse grasse
-                            itemSort: function(a, b) {
-                                const order = { 2: 0, 1: 1, 0: 2 };
-                                return order[a.datasetIndex] - order[b.datasetIndex];
-                            },
-                            callbacks: {
-                                label: function(context) {
-                                    const idx = context.dataIndex;
-                                    if (context.datasetIndex === 0) {
-                                        const kg = comp.fatKgRaw[idx];
-                                        const pct = comp.fatPercentArr[idx];
-                                        if (kg === null || kg === undefined) return null;
-                                        return `Masse grasse : ${kg} kg${pct !== null ? ' (' + pct + '%)' : ''}`;
-                                    }
-                                    if (context.datasetIndex === 1) {
-                                        const kg = comp.muscleKgRaw[idx];
-                                        const pct = comp.musclePercentArr[idx];
-                                        if (kg === null || kg === undefined) return null;
-                                        return `Masse musculaire : ${kg} kg${pct !== null ? ' (' + pct + '%)' : ''}`;
-                                    }
-                                    const w = comp.weightArr[idx];
-                                    if (w === null || w === undefined) return null;
-                                    return `Poids : ${w} kg`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: '#f1f5f9' },
-                            ticks: { font: { size: 10 } }
-                        }
-                    }
-                }
-            });
-
-            // --- Graphique des séances : calories dépensées par activité, groupées par type ---
-            const activityTypes = [
-                { key: 'Renfo', label: '🏋️ Renfo', color: '#6366f1' },
-                { key: 'Run', label: '🏃 Run', color: '#f43f5e' },
-                { key: 'Marche', label: '🚶 Marche', color: '#10b981' },
-                { key: 'Autre', label: '✨ Autre', color: '#f59e0b' }
-            ];
-            const sortedActivityDates = [...new Set(window.sportActivities.map(a => a.date))].sort();
-            const activityLabels = sortedActivityDates.map(d => formatDateFR(d));
-
-            const activityDatasets = activityTypes.map(t => ({
-                label: t.label,
-                data: sortedActivityDates.map(d => {
-                    const entriesForDay = window.sportActivities.filter(a => a.date === d && normalizeActivityType(a.type) === t.key);
-                    if (entriesForDay.length === 0) return null;
-                    return entriesForDay.reduce((sum, a) => sum + (a.calories || 0), 0);
-                }),
-                backgroundColor: t.color,
-                borderRadius: 4,
-                maxBarThickness: 28
-            }));
-
-            if (sportActivityChartInstance) sportActivityChartInstance.destroy();
-            sportActivityChartInstance = new Chart(activityCanvas.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: activityLabels,
-                    datasets: activityDatasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } } },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-                        y: {
-                            grid: { color: '#f1f5f9' },
-                            ticks: { font: { size: 10 } },
-                            title: { display: true, text: 'Calories (kcal)', font: { size: 10 } }
-                        }
-                    }
-                }
-            });
-        }
-
-        function renderSport() {
-            renderSportMeasurementsTable();
-            renderSportActivitiesTable();
-            const sportSection = document.getElementById('sport');
-            if (sportSection && sportSection.classList.contains('active')) {
-                renderSportCharts();
             }
         }
+
 
         window.onload = function() {
             switchTab('habit-tracker');
             const currentRealMonth = new Date().getMonth();
             document.getElementById('habit-month-select').value = currentRealMonth.toString();
 
-            const todayISO = formatDateISO(new Date());
-            const measureDateEl = document.getElementById('new-measure-date');
-            if (measureDateEl) measureDateEl.value = todayISO;
-            const activityDateEl = document.getElementById('new-activity-date');
-            if (activityDateEl) activityDateEl.value = todayISO;
+            const budgetDateEl = document.getElementById('new-budget-date');
+            if (budgetDateEl) budgetDateEl.value = formatDateISO(new Date());
+            refreshBudgetCategoryOptions();
         }
     </script>
 </body>
