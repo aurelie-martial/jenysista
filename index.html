@@ -1040,6 +1040,9 @@
 
         let unsubscribeSnapshot = null;
         let currentUserDocRef = null;
+        // Empêche toute sauvegarde tant que le premier chargement Firestore (réussi) n'a pas eu lieu,
+        // pour éviter d'écraser les vraies données avec les valeurs par défaut en cas de connexion lente.
+        let dataLoaded = false;
 
         // Connexion Google
         const loginGoogle = () => {
@@ -1117,6 +1120,10 @@
 
                 if (unsubscribeSnapshot) unsubscribeSnapshot();
 
+                // On repart d'un état "non chargé" tant que Firestore n'a pas confirmé
+                // le contenu réel du document (succès OU absence avérée du document).
+                dataLoaded = false;
+
                 unsubscribeSnapshot = onSnapshot(currentUserDocRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -1135,6 +1142,8 @@
                         window.budgetPlan = data.budgetPlan || window.budgetPlan;
                         window.mealPlans = data.mealPlans || window.mealPlans;
 
+                        dataLoaded = true; // chargement réel confirmé : saveData() est désormais autorisé
+
                         renderHabits();
                         renderTodos();
                         renderRecipes();
@@ -1144,8 +1153,17 @@
                         renderPasswordNotes();
                         renderBudget();
                     } else {
+                        // Le document n'existe vraiment pas encore (nouvel utilisateur) : c'est un cas
+                        // légitime de première sauvegarde, on autorise donc saveData() ici uniquement.
+                        dataLoaded = true;
                         saveData(); // Première sauvegarde si les données n'existent pas encore pour cet utilisateur
                     }
+                }, (error) => {
+                    // Erreur de lecture Firestore (réseau, permissions, etc.) : on NE débloque PAS
+                    // dataLoaded, pour éviter qu'une action de l'utilisateur ne déclenche une
+                    // sauvegarde qui écraserait ses vraies données avec les valeurs par défaut.
+                    console.error("Erreur de chargement Firebase (les sauvegardes sont bloquées par sécurité) :", error);
+                    alert("⚠️ Impossible de récupérer tes données depuis le serveur. Vérifie ta connexion et recharge la page avant de continuer, pour ne pas risquer d'écraser tes données.");
                 });
 
             } else {
@@ -1160,11 +1178,16 @@
 
                 if (unsubscribeSnapshot) unsubscribeSnapshot();
                 currentUserDocRef = null;
+                dataLoaded = false;
             }
         });
 
         window.saveData = async function() {
             if (!currentUserDocRef) return;
+            if (!dataLoaded) {
+                console.warn("Sauvegarde ignorée : les données n'ont pas encore été chargées depuis Firebase.");
+                return;
+            }
 
             const payload = {
                 categories: window.categories,
