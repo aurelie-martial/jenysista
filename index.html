@@ -1012,6 +1012,21 @@
     </div>
 
     <footer class="bg-white border-t border-slate-100 py-6 mt-12 text-center text-xs text-slate-400">
+        <div id="footer-backup-actions" class="hidden flex items-center justify-center gap-4 mb-3">
+            <button id="btn-export-backup" title="Télécharger une copie de secours de toutes tes données" class="flex items-center gap-1 text-xs text-slate-500 hover:text-pink-600 underline font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                </svg>
+                Sauvegarder
+            </button>
+            <label title="Restaurer tes données à partir d'un fichier de sauvegarde téléchargé" class="flex items-center gap-1 text-xs text-slate-500 hover:text-pink-600 underline font-medium cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8v-2a2 2 0 012-2h12a2 2 0 012 2v2M7 14l5-5 5 5M12 9v12" />
+                </svg>
+                Restaurer
+                <input type="file" id="input-restore-backup" accept="application/json" class="hidden">
+            </label>
+        </div>
         <p>© Made in Jeny - 2026</p>
     </footer>
 
@@ -1093,6 +1108,7 @@
             const userAvatarMobile = document.getElementById('user-avatar-mobile');
             const appContent = document.getElementById('app-content');
             const loggedOutScreen = document.getElementById('logged-out-screen');
+            const footerBackupActions = document.getElementById('footer-backup-actions');
 
             if (user && !ALLOWED_EMAILS.includes(user.email)) {
                 // Compte Google non autorisé : déconnexion immédiate
@@ -1106,6 +1122,7 @@
                 loginBtn.classList.add('hidden');
                 loginBtnMobile.classList.add('hidden');
                 userInfo.classList.remove('hidden');
+                if (footerBackupActions) footerBackupActions.classList.remove('hidden');
                 userInfoMobile.classList.remove('hidden');
                 
                 const avatarSrc = user.photoURL || 'https://via.placeholder.com/32';
@@ -1171,6 +1188,7 @@
                 loginBtn.classList.remove('hidden');
                 loginBtnMobile.classList.remove('hidden');
                 userInfo.classList.add('hidden');
+                if (footerBackupActions) footerBackupActions.classList.add('hidden');
                 userInfoMobile.classList.add('hidden');
                 
                 appContent.classList.add('hidden');
@@ -1182,14 +1200,10 @@
             }
         });
 
-        window.saveData = async function() {
-            if (!currentUserDocRef) return;
-            if (!dataLoaded) {
-                console.warn("Sauvegarde ignorée : les données n'ont pas encore été chargées depuis Firebase.");
-                return;
-            }
-
-            const payload = {
+        // Rassemble toutes les données de l'appli en un seul objet — utilisé à la fois
+        // pour la sauvegarde Firestore et pour le bouton "Sauvegarder" (export manuel).
+        function buildPayload() {
+            return {
                 categories: window.categories,
                 habits: window.habits,
                 todoData: window.todoData,
@@ -1205,6 +1219,16 @@
                 budgetPlan: window.budgetPlan,
                 mealPlans: window.mealPlans
             };
+        }
+
+        window.saveData = async function() {
+            if (!currentUserDocRef) return;
+            if (!dataLoaded) {
+                console.warn("Sauvegarde ignorée : les données n'ont pas encore été chargées depuis Firebase.");
+                return;
+            }
+
+            const payload = buildPayload();
 
             // Vérification préventive AVANT l'envoi : Firestore limite un document à 1 Mo (≈1024 Ko)
             // pour TOUTES les données cumulées (recettes, habitudes, todos, agenda...). Sans ce contrôle,
@@ -1226,6 +1250,88 @@
                 alert("⚠️ La sauvegarde a échoué. Vos derniers changements (peut-être une photo trop volumineuse) n'ont pas été enregistrés.");
             }
         };
+
+        // --- Bouton "Sauvegarder" : télécharge un fichier .json avec toutes les données actuelles ---
+        window.exportBackup = function() {
+            if (!dataLoaded) {
+                alert("⚠️ Attends que tes données soient chargées avant de faire une sauvegarde.");
+                return;
+            }
+            try {
+                const payload = buildPayload();
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const dateStr = new Date().toISOString().slice(0, 10); // ex: 2026-08-22
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `jenytracker-sauvegarde-${dateStr}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error("Erreur lors de l'export de la sauvegarde :", e);
+                alert("⚠️ La sauvegarde n'a pas pu être téléchargée.");
+            }
+        };
+
+        // --- Bouton "Restaurer" : relit un fichier .json précédemment téléchargé et le renvoie sur Firestore ---
+        window.restoreBackup = function(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    const confirmMsg = "⚠️ Restaurer ce fichier va REMPLACER toutes tes données actuelles par celles de la sauvegarde. Continuer ?";
+                    if (!confirm(confirmMsg)) return;
+
+                    window.categories = data.categories || window.categories;
+                    window.habits = data.habits || window.habits;
+                    window.todoData = data.todoData || window.todoData;
+                    window.planCategories = data.planCategories || window.planCategories;
+                    window.planGoals = data.planGoals || window.planGoals;
+                    window.recipeCategories = data.recipeCategories || window.recipeCategories;
+                    window.recipes = data.recipes || window.recipes;
+                    window.agendaEvents = data.agendaEvents || window.agendaEvents;
+                    window.agendaPasswordNotes = data.agendaPasswordNotes || window.agendaPasswordNotes;
+                    window.budgetTransactions = data.budgetTransactions || window.budgetTransactions;
+                    window.budgetCategories = data.budgetCategories || window.budgetCategories;
+                    window.budgetTargets = data.budgetTargets || window.budgetTargets;
+                    window.budgetPlan = data.budgetPlan || window.budgetPlan;
+                    window.mealPlans = data.mealPlans || window.mealPlans;
+
+                    renderHabits();
+                    renderTodos();
+                    renderRecipes();
+                    renderMealPlanner();
+                    renderPlanGoals();
+                    renderAgenda();
+                    renderPasswordNotes();
+                    renderBudget();
+
+                    await window.saveData();
+                    alert("✅ Restauration terminée, tes données ont été renvoyées sur le serveur.");
+                } catch (e) {
+                    console.error("Erreur lors de la restauration :", e);
+                    alert("⚠️ Ce fichier ne semble pas être une sauvegarde valide.");
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const exportBtn = document.getElementById("btn-export-backup");
+            if (exportBtn) exportBtn.addEventListener("click", window.exportBackup);
+
+            const restoreInput = document.getElementById("input-restore-backup");
+            if (restoreInput) {
+                restoreInput.addEventListener("change", (e) => {
+                    const file = e.target.files[0];
+                    window.restoreBackup(file);
+                    e.target.value = ""; // permet de resélectionner le même fichier plus tard
+                });
+            }
+        });
     </script>
 
     <!-- CLASSIC APPLICATION LOGIC -->
