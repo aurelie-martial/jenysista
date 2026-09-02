@@ -1029,8 +1029,24 @@
         </div>
     </div>
 
+    <!-- MODAL : RESTAURATION D'UNE SAUVEGARDE AUTOMATIQUE -->
+    <div id="auto-backup-restore-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-100 max-w-md w-full p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-lg">Restaurer une sauvegarde automatique</h3>
+                <button onclick="closeAutoBackupRestoreModal()" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+
+            <p class="text-xs text-slate-500">Sauvegardes quotidiennes automatiques, conservées 30 jours. Restaurer remplace toutes les données actuelles par celles de ce jour-là.</p>
+
+            <div id="auto-backup-restore-list" class="space-y-1.5 max-h-72 overflow-y-auto">
+                <p class="text-xs text-slate-400 text-center py-4">Chargement…</p>
+            </div>
+        </div>
+    </div>
+
     <footer class="bg-white border-t border-slate-100 py-6 mt-12 text-center text-xs text-slate-400">
-        <div id="footer-backup-actions" class="hidden flex items-center justify-center gap-4 mb-3">
+        <div id="footer-backup-actions" class="hidden flex items-center justify-center gap-4 mb-3 flex-wrap">
             <button id="btn-export-backup" title="Télécharger une copie de secours de toutes tes données" class="flex items-center gap-1 text-xs text-slate-500 hover:text-pink-600 underline font-medium">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
@@ -1044,14 +1060,18 @@
                 Restaurer
                 <input type="file" id="input-restore-backup" accept="application/json" class="hidden">
             </label>
+            <button onclick="openAutoBackupRestoreModal()" class="flex items-center gap-1 text-xs text-slate-500 hover:text-pink-600 underline font-medium">
+                Restaurer une sauvegarde automatique
+            </button>
         </div>
         <p>© Made in Jeny - 2026</p>
+        <p id="auto-backup-status" class="mt-1.5 text-[11px] text-slate-300"></p>
     </footer>
 
     <!-- FIREBASE AUTH & FIRESTORE LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, getDocFromServer, getDoc, getDocs, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -1076,6 +1096,8 @@
         // Empêche toute sauvegarde tant que le premier chargement Firestore (réussi) n'a pas eu lieu,
         // pour éviter d'écraser les vraies données avec les valeurs par défaut en cas de connexion lente.
         let dataLoaded = false;
+        // Empêche de relancer la sauvegarde automatique quotidienne plusieurs fois pendant la même session.
+        let dailyBackupChecked = false;
 
         // Connexion Google
         const loginGoogle = () => {
@@ -1188,12 +1210,33 @@
                         renderAgenda();
                         renderPasswordNotes();
                         renderBudget();
-                    } else {
-                        // Le document n'existe vraiment pas encore (nouvel utilisateur) : c'est un cas
-                        // légitime de première sauvegarde, on autorise donc saveData() ici uniquement.
-                        dataLoaded = true;
-                        saveData(); // Première sauvegarde si les données n'existent pas encore pour cet utilisateur
+                        maybeRunDailyBackup();
+                    } else if (!docSnap.metadata.fromCache) {
+                        // Garde-fou anti-perte de données (même correctif que sur LilyTracker suite à
+                        // l'incident du 2 sept. 2026) : un faux "document inexistant" au chargement
+                        // (souci réseau/cache au premier chargement) peut faire écraser silencieusement
+                        // toutes les données réelles par les valeurs par défaut ci-dessous. On ignore
+                        // d'abord toute réponse venant seulement du cache local (docSnap.metadata.fromCache),
+                        // puis on revérifie une dernière fois directement auprès du serveur, et on demande
+                        // une confirmation EXPLICITE avant de créer quoi que ce soit — jamais d'écriture silencieuse.
+                        getDocFromServer(currentUserDocRef).then((serverSnap) => {
+                            if (serverSnap.exists()) return; // faux négatif du listener : on ne touche à rien
+                            const confirmed = window.confirm(
+                                "⚠️ Aucune donnée trouvée sur le serveur pour ce compte.\n\n" +
+                                "Si tu utilises déjà JenyTracker normalement, NE CONTINUE PAS : ferme cette page " +
+                                "plutôt que de risquer d'écraser tes données existantes.\n\n" +
+                                "Créer quand même un nouveau document avec les valeurs par défaut ?"
+                            );
+                            if (confirmed) {
+                                dataLoaded = true; // chargement réel confirmé (nouveau document) : saveData() est désormais autorisé
+                                saveData(); // Première sauvegarde si les données n'existent vraiment pas encore pour cet utilisateur
+                            }
+                        }).catch((err) => {
+                            console.error("Vérification serveur impossible avant création du document par défaut :", err);
+                        });
                     }
+                    // Si docSnap.metadata.fromCache est true ici, on ignore silencieusement : ce n'est
+                    // qu'une réponse locale en attendant la confirmation du serveur juste après.
                 }, (error) => {
                     // Erreur de lecture Firestore (réseau, permissions, etc.) : on NE débloque PAS
                     // dataLoaded, pour éviter qu'une action de l'utilisateur ne déclenche une
@@ -1216,6 +1259,7 @@
                 if (unsubscribeSnapshot) unsubscribeSnapshot();
                 currentUserDocRef = null;
                 dataLoaded = false;
+                dailyBackupChecked = false;
             }
         });
 
@@ -1267,6 +1311,161 @@
             } catch (e) {
                 console.error("Erreur de sauvegarde Firebase: ", e);
                 alert("⚠️ La sauvegarde a échoué. Vos derniers changements (peut-être une photo trop volumineuse) n'ont pas été enregistrés.");
+            }
+        };
+
+        // Sauvegarde automatique quotidienne — aucune action manuelle requise (même dispositif que
+        // sur LilyTracker). À chaque ouverture de l'app où les vraies données ont bien été chargées,
+        // copie l'état courant dans users/{uid}/backups/{AAAA-MM-JJ} (une fois par jour calendaire
+        // maximum : on vérifie d'abord si la sauvegarde du jour existe déjà). C'est un filet de secours
+        // indépendant du document principal : même si un futur bug l'écrase à nouveau, un instantané
+        // d'un jour précédent reste récupérable. Purge automatiquement les sauvegardes de plus de 30
+        // jours pour ne jamais accumuler indéfiniment ni générer de coût de stockage significatif.
+        async function maybeRunDailyBackup() {
+            if (!currentUserDocRef || dailyBackupChecked) return;
+            dailyBackupChecked = true; // au plus une tentative par chargement de page
+
+            function isoDate(d) {
+                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            }
+
+            try {
+                const now = new Date();
+                const dateStr = isoDate(now);
+                const backupRef = doc(currentUserDocRef, "backups", dateStr);
+
+                const existing = await getDoc(backupRef);
+                if (existing.exists()) {
+                    renderAutoBackupStatus(dateStr);
+                    return; // déjà sauvegardé aujourd'hui
+                }
+
+                const payload = buildPayload();
+                payload._backupCreatedAt = now.toISOString();
+                const safePayload = JSON.parse(JSON.stringify(payload));
+                await setDoc(backupRef, safePayload);
+                renderAutoBackupStatus(dateStr);
+
+                // Purge des sauvegardes de plus de 30 jours.
+                const cutoff = new Date(now);
+                cutoff.setDate(cutoff.getDate() - 30);
+                const cutoffStr = isoDate(cutoff);
+                const snap = await getDocs(collection(currentUserDocRef, "backups"));
+                snap.forEach((d) => {
+                    if (d.id < cutoffStr) deleteDoc(d.ref).catch(() => {});
+                });
+            } catch (e) {
+                console.warn("Sauvegarde automatique quotidienne impossible :", e);
+                renderAutoBackupStatus(null);
+            }
+        }
+
+        // Petit indicateur discret dans le pied de page qui confirme que la sauvegarde automatique
+        // du jour est bien en place, sans avoir à aller la chercher dans la console Firebase.
+        function renderAutoBackupStatus(dateStr) {
+            const el = document.getElementById('auto-backup-status');
+            if (!el) return;
+            if (!dateStr) {
+                el.textContent = "Sauvegarde automatique : indisponible pour le moment";
+                return;
+            }
+            const [y, m, d] = dateStr.split('-');
+            el.textContent = `Sauvegarde automatique à jour (${d}/${m}/${y})`;
+        }
+
+        // Restauration depuis une sauvegarde automatique quotidienne (users/{uid}/backups/{date}),
+        // distincte de l'import de fichier JSON manuel ci-dessous. Ouvre une liste des sauvegardes
+        // disponibles (30 derniers jours max) pour choisir laquelle restaurer.
+        window.openAutoBackupRestoreModal = async function() {
+            const modal = document.getElementById('auto-backup-restore-modal');
+            const listEl = document.getElementById('auto-backup-restore-list');
+            if (!modal || !listEl) return;
+            modal.classList.remove('hidden');
+            listEl.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Chargement…</p>';
+
+            if (!currentUserDocRef) {
+                listEl.innerHTML = '<p class="text-xs text-rose-500 text-center py-4">Impossible de charger les sauvegardes (non connecté).</p>';
+                return;
+            }
+
+            try {
+                const snap = await getDocs(collection(currentUserDocRef, "backups"));
+                const dates = [];
+                snap.forEach((d) => dates.push(d.id));
+                dates.sort().reverse(); // AAAA-MM-JJ trie chronologiquement : du plus récent au plus ancien
+
+                if (dates.length === 0) {
+                    listEl.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">Aucune sauvegarde automatique disponible pour le moment.</p>';
+                    return;
+                }
+
+                listEl.innerHTML = dates.map((dateStr) => {
+                    const [y, m, d] = dateStr.split('-');
+                    return `<div class="flex items-center justify-between px-3 py-2 rounded-xl border border-slate-100 hover:bg-slate-50">
+                        <span class="text-sm text-slate-700">${d}/${m}/${y}</span>
+                        <button onclick="confirmRestoreAutoBackup('${dateStr}')" class="text-xs font-semibold text-indigo-500 hover:text-indigo-700">Restaurer</button>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                console.error("Erreur de chargement des sauvegardes automatiques :", e);
+                listEl.innerHTML = '<p class="text-xs text-rose-500 text-center py-4">Erreur lors du chargement des sauvegardes.</p>';
+            }
+        };
+
+        window.closeAutoBackupRestoreModal = function() {
+            const modal = document.getElementById('auto-backup-restore-modal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.confirmRestoreAutoBackup = async function(dateStr) {
+            const [y, m, d] = dateStr.split('-');
+            if (!confirm(`Restaurer la sauvegarde du ${d}/${m}/${y} va remplacer TOUTES tes données actuelles (habitudes, todos, recettes, budget, agenda...). Cette action est irréversible. Continuer ?`)) {
+                return;
+            }
+            if (!currentUserDocRef) {
+                alert("⚠️ Impossible de restaurer : non connecté.");
+                return;
+            }
+            try {
+                const backupRef = doc(currentUserDocRef, "backups", dateStr);
+                const snap = await getDoc(backupRef);
+                if (!snap.exists()) {
+                    alert("⚠️ Cette sauvegarde n'existe plus.");
+                    return;
+                }
+                const data = snap.data();
+                window.categories = data.categories || window.categories;
+                window.habits = data.habits || window.habits;
+                window.todoData = data.todoData || window.todoData;
+                window.planCategories = data.planCategories || window.planCategories;
+                window.planGoals = data.planGoals || window.planGoals;
+                window.recipeCategories = data.recipeCategories || window.recipeCategories;
+                window.recipes = data.recipes || window.recipes;
+                window.agendaEvents = data.agendaEvents || window.agendaEvents;
+                window.agendaPasswordNotes = data.agendaPasswordNotes || window.agendaPasswordNotes;
+                window.budgetTransactions = data.budgetTransactions || window.budgetTransactions;
+                window.budgetCategories = data.budgetCategories || window.budgetCategories;
+                window.budgetTargets = data.budgetTargets || window.budgetTargets;
+                window.budgetPlan = data.budgetPlan || window.budgetPlan;
+                window.mealPlans = data.mealPlans || window.mealPlans;
+                migrateBudgetPlan();
+
+                renderHabits();
+                renderTodos();
+                renderRecipes();
+                renderMealPlanner();
+                renderPlanGoals();
+                renderAgenda();
+                renderPasswordNotes();
+                renderBudget();
+
+                if (typeof window.saveData === 'function') await window.saveData();
+
+                closeAutoBackupRestoreModal();
+                alert(`✅ Sauvegarde du ${d}/${m}/${y} restaurée avec succès.`);
+            } catch (e) {
+                console.error("Erreur de restauration automatique :", e);
+                alert("⚠️ La restauration a échoué.");
             }
         };
 
